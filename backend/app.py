@@ -238,16 +238,30 @@ def update_user(current_user, id):
         return jsonify({'message': 'User updated!'}), 200
     return jsonify({'message': 'User not found!'}), 404
 
-# Delete user
+# Delete user and handle related records
 @app.route('/api/flask/users/<id>', methods=['DELETE'])
 @token_required
 def delete_user(current_user, id):
-    user = User.query.filter_by(id=id).first()
-    if user:
-        db.session.delete(user)
-        db.session.commit()
-        return jsonify({'message': 'User deleted!'}), 200
-    return jsonify({'message': 'User not found!'}), 404
+    try:
+        user = User.query.filter_by(id=id).first()
+        if user:
+            # Delete related records first if necessary
+            Request.query.filter_by(user_id=user.id).delete()
+            Offer.query.filter_by(user_id=user.id).delete()
+            Friendship.query.filter_by(user_id=user.id).delete()
+            Friendship.query.filter_by(friend_id=user.id).delete()
+            Notification.query.filter_by(user_id=user.id).delete()
+            
+            # Then delete the user
+            db.session.delete(user)
+            db.session.commit()
+            return jsonify({'message': 'User deleted!'}), 200
+        return jsonify({'message': 'User not found!'}), 404
+    except Exception as e:
+        # Log the exception and return a detailed error message
+        app.logger.error(f"Error deleting user: {e}")
+        return jsonify({'message': 'Internal Server Error', 'error': str(e)}), 500
+
 
 # Test route
 @app.route('/test', methods=['GET'])
