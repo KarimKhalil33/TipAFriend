@@ -24,7 +24,7 @@ export default function SignUpPage() {
     setError("");
 
     try {
-      const res = await fetch("/api/signup", {
+      const res = await fetch("http://127.0.0.1:5000/api/flask/users", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -36,7 +36,7 @@ export default function SignUpPage() {
         router.push("/login");
       } else {
         const data = await res.json();
-        setError(data.error);
+        setError(data.message || "Failed to create user");
       }
     } catch (error) {
       console.error("Error:", error);
@@ -45,16 +45,16 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen py-2 bg-white">
+    <div className="flex flex-col items-center justify-center min-h-screen py-2 bg-gradient-to-r from-blue-900 to-indigo-900 text-white">
       <main className="flex flex-col items-center justify-center w-full flex-1 px-20 text-center">
-        <div className="bg-black rounded-2xl shadow-2xl flex w-2/3 max-w-4xl">
-          <div className="w-3/5 p-5 text-white">
-            <div className="text-left font-bold text-xl">
-              T<span className="text-blue-900">A</span>F
+        <div className="bg-black bg-opacity-80 rounded-2xl shadow-2xl flex w-full max-w-4xl">
+          <div className="w-3/5 p-8 text-white">
+            <div className="text-left font-bold text-2xl">
+              T<span className="text-blue-500">A</span>F
             </div>
             <div className="py-10">
-              <h2 className="text-3xl font-bold mb-2">Create an Account</h2>
-              <div className="border-2 w-20 border-white inline-block mb-2"></div>
+              <h2 className="text-4xl font-bold mb-2">Create an Account</h2>
+              <div className="border-2 w-20 border-blue-500 inline-block mb-2"></div>
               <div className="flex justify-center my-2">
                 <a
                   href="#"
@@ -80,10 +80,10 @@ export default function SignUpPage() {
               </p>
               <form
                 onSubmit={handleSubmit}
-                className="flex flex-col items-center"
+                className="flex flex-col items-center space-y-6"
               >
-                <div className="bg-gray-900 w-64 p-2 flex items-center mb-3">
-                  <FaRegEnvelope className="text-gray-400 m-2" />
+                <div className="bg-gray-900 w-full max-w-md p-4 flex items-center rounded-md shadow-md">
+                  <FaRegEnvelope className="text-gray-400 mr-3" />
                   <input
                     type="email"
                     name="email"
@@ -93,8 +93,8 @@ export default function SignUpPage() {
                     className="bg-gray-900 text-white outline-none flex-1"
                   />
                 </div>
-                <div className="bg-gray-900 w-64 p-2 flex items-center mb-3">
-                  <MdLockOutline className="text-gray-400 m-2" />
+                <div className="bg-gray-900 w-full max-w-md p-4 flex items-center rounded-md shadow-md">
+                  <MdLockOutline className="text-gray-400 mr-3" />
                   <input
                     type="password"
                     name="password"
@@ -104,8 +104,8 @@ export default function SignUpPage() {
                     className="bg-gray-900 text-white outline-none flex-1"
                   />
                 </div>
-                <div className="bg-gray-900 w-64 p-2 flex items-center mb-3">
-                  <FaRegEnvelope className="text-gray-400 m-2" />
+                <div className="bg-gray-900 w-full max-w-md p-4 flex items-center rounded-md shadow-md">
+                  <FaRegEnvelope className="text-gray-400 mr-3" />
                   <input
                     type="text"
                     name="name"
@@ -118,7 +118,7 @@ export default function SignUpPage() {
                 {error && <p className="text-red-500">{error}</p>}
                 <Button
                   type="submit"
-                  className="border-2 border-white rounded-full px-12 py-2 inline-block font-semibold hover:bg-white hover:text-black"
+                  className="w-full max-w-md bg-blue-500 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-md transition duration-300 ease-in-out transform hover:scale-105"
                 >
                   Sign Up
                 </Button>
@@ -141,6 +141,11 @@ export default function SignUpPage() {
           </div>
         </div>
       </main>
+      <style jsx>{`
+        .bg-gradient-to-r {
+          background: linear-gradient(to right, #1e3a8a, #3b82f6);
+        }
+      `}</style>
     </div>
   );
 }

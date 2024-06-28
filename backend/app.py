@@ -9,8 +9,17 @@ from functools import wraps
 
 app = Flask(__name__)
 CORS(app)
-app.config['SQLALCHEMY_DATABASE_URI'] = environ.get('DATABASE_URL')
-app.config['SECRET_KEY'] = environ.get('SECRET_KEY')
+
+# Ensure these environment variables are set
+DATABASE_URL = environ.get('DATABASE_URL')
+SECRET_KEY = environ.get('SECRET_KEY')
+
+if not DATABASE_URL or not SECRET_KEY:
+    raise RuntimeError("DATABASE_URL and SECRET_KEY environment variables must be set")
+
+app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
+app.config['SECRET_KEY'] = SECRET_KEY
+
 db = SQLAlchemy(app)
 
 # User Model
@@ -97,9 +106,6 @@ class Notification(db.Model):
             'timestamp': self.timestamp.strftime('%Y-%m-%d %H:%M:%S')
         }
 
-# Initialize the database
-db.create_all()
-
 # Authentication decorator
 def token_required(f):
     @wraps(f)
@@ -121,7 +127,7 @@ def token_required(f):
 @app.route('/api/flask/users', methods=['POST'])
 def create_user():
     data = request.get_json()
-    hashed_password = generate_password_hash(data['password'], method='sha256')
+    hashed_password = generate_password_hash(data['password'], method='pbkdf2:sha256')
     new_user = User(name=data['name'], email=data['email'], password=hashed_password)
     db.session.add(new_user)
     db.session.commit()
@@ -233,7 +239,7 @@ def update_user(current_user, id):
         user.name = data['name']
         user.email = data['email']
         if 'password' in data:
-            user.password = generate_password_hash(data['password'], method='sha256')
+            user.password = generate_password_hash(data['password'], method='pbkdf2:sha256')
         db.session.commit()
         return jsonify({'message': 'User updated!'}), 200
     return jsonify({'message': 'User not found!'}), 404
@@ -262,11 +268,12 @@ def delete_user(current_user, id):
         app.logger.error(f"Error deleting user: {e}")
         return jsonify({'message': 'Internal Server Error', 'error': str(e)}), 500
 
-
 # Test route
 @app.route('/test', methods=['GET'])
 def test():
     return jsonify({'message': 'The server is running'})
 
 if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
     app.run(debug=True)

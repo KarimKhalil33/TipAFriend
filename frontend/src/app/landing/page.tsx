@@ -2,12 +2,19 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { FaShieldAlt, FaBolt, FaUsers, FaRegCheckCircle } from "react-icons/fa";
+import {
+  FaShieldAlt,
+  FaBolt,
+  FaUsers,
+  FaRegCheckCircle,
+  FaStar,
+  FaThumbsUp,
+} from "react-icons/fa";
 
 export default function LandingPage() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-r from-blue-900 to-indigo-900 text-white">
-      <header className="w-full py-6 px-12 flex justify-between items-center bg-black shadow-md mb-12">
+    <div className="relative flex flex-col items-center justify-center min-h-screen bg-gradient-to-r from-blue-900 to-indigo-900 text-white overflow-hidden">
+      <header className="w-full py-6 px-12 flex justify-between items-center bg-black bg-opacity-50 shadow-md mb-12 backdrop-filter backdrop-blur-lg">
         <div className="text-2xl font-bold tracking-wide">
           T<span className="text-blue-500">A</span>F
         </div>
@@ -24,7 +31,7 @@ export default function LandingPage() {
           </Link>
         </nav>
       </header>
-      <main className="flex flex-col items-center justify-center flex-1 px-20 text-center">
+      <main className="relative z-10 flex flex-col items-center justify-center flex-1 px-20 text-center">
         <section className="animate-fade-in-down">
           <h2 className="text-6xl font-extrabold mb-6 text-blue-500">
             Welcome to
@@ -48,18 +55,18 @@ export default function LandingPage() {
             Features
           </h2>
           <div className="flex justify-around flex-wrap gap-6">
-            <div className="bg-gray-800 text-white p-8 rounded-xl shadow-lg max-w-xs transform transition duration-300 ease-in-out hover:scale-105 animate-fade-in-left">
+            <div className="bg-gray-800 bg-opacity-75 text-white p-8 rounded-xl shadow-lg max-w-xs transform transition duration-300 ease-in-out hover:scale-105 animate-fade-in-left">
               <h3 className="text-2xl font-bold mb-4">Easy to Use</h3>
               <p>
                 Create tasks easily and manage them with a user-friendly
                 interface.
               </p>
             </div>
-            <div className="bg-gray-800 text-white p-8 rounded-xl shadow-lg max-w-xs transform transition duration-300 ease-in-out hover:scale-105 animate-fade-in-up">
+            <div className="bg-gray-800 bg-opacity-75 text-white p-8 rounded-xl shadow-lg max-w-xs transform transition duration-300 ease-in-out hover:scale-105 animate-fade-in-up">
               <h3 className="text-2xl font-bold mb-4">Secure Payments</h3>
               <p>Use trusted payment gateways to ensure safe transactions.</p>
             </div>
-            <div className="bg-gray-800 text-white p-8 rounded-xl shadow-lg max-w-xs transform transition duration-300 ease-in-out hover:scale-105 animate-fade-in-right">
+            <div className="bg-gray-800 bg-opacity-75 text-white p-8 rounded-xl shadow-lg max-w-xs transform transition duration-300 ease-in-out hover:scale-105 animate-fade-in-right">
               <h3 className="text-2xl font-bold mb-4">Real-Time Updates</h3>
               <p>Receive notifications and updates on your tasks instantly.</p>
             </div>
@@ -70,7 +77,7 @@ export default function LandingPage() {
             Why Choose Us?
           </h2>
           <div className="flex justify-around flex-wrap gap-6">
-            <div className="bg-gray-800 text-white p-8 rounded-xl shadow-lg max-w-xs transform transition duration-300 ease-in-out hover:scale-105">
+            <div className="bg-gray-800 bg-opacity-75 text-white p-8 rounded-xl shadow-lg max-w-xs transform transition duration-300 ease-in-out hover:scale-105">
               <FaShieldAlt className="text-blue-500 text-4xl mb-4" />
               <h3 className="text-2xl font-bold mb-4">Secure</h3>
               <p>
@@ -78,14 +85,14 @@ export default function LandingPage() {
                 transactions.
               </p>
             </div>
-            <div className="bg-gray-800 text-white p-8 rounded-xl shadow-lg max-w-xs transform transition duration-300 ease-in-out hover:scale-105">
+            <div className="bg-gray-800 bg-opacity-75 text-white p-8 rounded-xl shadow-lg max-w-xs transform transition duration-300 ease-in-out hover:scale-105">
               <FaBolt className="text-blue-500 text-4xl mb-4" />
               <h3 className="text-2xl font-bold mb-4">Fast</h3>
               <p>
                 Experience lightning-fast transactions and real-time updates.
               </p>
             </div>
-            <div className="bg-gray-800 text-white p-8 rounded-xl shadow-lg max-w-xs transform transition duration-300 ease-in-out hover:scale-105">
+            <div className="bg-gray-800 bg-opacity-75 text-white p-8 rounded-xl shadow-lg max-w-xs transform transition duration-300 ease-in-out hover:scale-105">
               <FaUsers className="text-blue-500 text-4xl mb-4" />
               <h3 className="text-2xl font-bold mb-4">Community</h3>
               <p>
@@ -95,12 +102,12 @@ export default function LandingPage() {
             </div>
           </div>
         </section>
-        <section className="w-full mt-16 bg-black py-12 animate-fade-in-up">
+        <section className="w-full mt-16 bg-black bg-opacity-75 py-12 rounded-lg animate-fade-in-up">
           <h2 className="text-4xl font-bold mb-6 text-blue-500">
             How It Works
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 px-8">
-            <div className="bg-gray-800 text-white p-6 rounded-lg shadow-lg transform transition duration-300 ease-in-out hover:scale-105">
+            <div className="bg-gray-800 bg-opacity-75 text-white p-6 rounded-lg shadow-lg transform transition duration-300 ease-in-out hover:scale-105">
               <FaRegCheckCircle className="text-blue-500 text-4xl mb-4" />
               <h3 className="text-2xl font-bold mb-4">1. Sign Up</h3>
               <p>
@@ -108,7 +115,7 @@ export default function LandingPage() {
                 registration process.
               </p>
             </div>
-            <div className="bg-gray-800 text-white p-6 rounded-lg shadow-lg transform transition duration-300 ease-in-out hover:scale-105">
+            <div className="bg-gray-800 bg-opacity-75 text-white p-6 rounded-lg shadow-lg transform transition duration-300 ease-in-out hover:scale-105">
               <FaRegCheckCircle className="text-blue-500 text-4xl mb-4" />
               <h3 className="text-2xl font-bold mb-4">2. Connect</h3>
               <p>
@@ -116,7 +123,7 @@ export default function LandingPage() {
                 effortlessly.
               </p>
             </div>
-            <div className="bg-gray-800 text-white p-6 rounded-lg shadow-lg transform transition duration-300 ease-in-out hover:scale-105">
+            <div className="bg-gray-800 bg-opacity-75 text-white p-6 rounded-lg shadow-lg transform transition duration-300 ease-in-out hover:scale-105">
               <FaRegCheckCircle className="text-blue-500 text-4xl mb-4" />
               <h3 className="text-2xl font-bold mb-4">3. Enjoy</h3>
               <p>
@@ -141,31 +148,56 @@ export default function LandingPage() {
             Why Tip A Friend?
           </h2>
           <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="bg-gray-800 text-white p-8 rounded-lg shadow-lg transform transition duration-300 ease-in-out hover:scale-105">
+            <div className="bg-gray-800 bg-opacity-75 text-white p-8 rounded-lg shadow-lg transform transition duration-300 ease-in-out hover:scale-105">
               <h3 className="text-2xl font-bold mb-4">More Safety</h3>
               <p>
                 Only interact with trusted friends, ensuring a safer experience.
               </p>
             </div>
-            <div className="bg-gray-800 text-white p-8 rounded-lg shadow-lg transform transition duration-300 ease-in-out hover:scale-105">
+            <div className="bg-gray-800 bg-opacity-75 text-white p-8 rounded-lg shadow-lg transform transition duration-300 ease-in-out hover:scale-105">
               <h3 className="text-2xl font-bold mb-4">More Enjoyable</h3>
               <p>
                 Engage in tasks with friends, making the experience more
                 enjoyable.
               </p>
             </div>
-            <div className="bg-gray-800 text-white p-8 rounded-lg shadow-lg transform transition duration-300 ease-in-out hover:scale-105">
+            <div className="bg-gray-800 bg-opacity-75 text-white p-8 rounded-lg shadow-lg transform transition duration-300 ease-in-out hover:scale-105">
               <h3 className="text-2xl font-bold mb-4">More Interactive</h3>
               <p>Create and accept tasks in a dynamic and interactive way.</p>
             </div>
-            <div className="bg-gray-800 text-white p-8 rounded-lg shadow-lg transform transition duration-300 ease-in-out hover:scale-105">
+            <div className="bg-gray-800 bg-opacity-75 text-white p-8 rounded-lg shadow-lg transform transition duration-300 ease-in-out hover:scale-105">
               <h3 className="text-2xl font-bold mb-4">Friends' Rates</h3>
               <p>Benefit from friends' rates, making tasks more affordable.</p>
             </div>
           </div>
         </section>
+        <section className="w-full mt-16 bg-blue-800 bg-opacity-75 py-12 rounded-lg animate-fade-in-up">
+          <h2 className="text-4xl font-bold mb-6 text-yellow-400">
+            What Our Users Say
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 px-8">
+            <div className="bg-gray-700 bg-opacity-75 text-white p-6 rounded-lg shadow-lg transform transition duration-300 ease-in-out hover:scale-105">
+              <FaStar className="text-yellow-400 text-4xl mb-4" />
+              <h3 className="text-2xl font-bold mb-4">Alice Johnson</h3>
+              <p>
+                "Tip A Friend has made my life so much easier. I can easily get
+                help from friends for various tasks and even earn a little
+                extra!"
+              </p>
+            </div>
+            <div className="bg-gray-700 bg-opacity-75 text-white p-6 rounded-lg shadow-lg transform transition duration-300 ease-in-out hover:scale-105">
+              <FaThumbsUp className="text-yellow-400 text-4xl mb-4" />
+              <h3 className="text-2xl font-bold mb-4">John Smith</h3>
+              <p>
+                "The secure payment feature is fantastic. I feel safe
+                transacting through the app and the real-time updates keep me
+                informed."
+              </p>
+            </div>
+          </div>
+        </section>
       </main>
-      <footer className="w-full py-6 px-12 flex justify-between items-center bg-black shadow-md mt-16">
+      <footer className="w-full py-6 px-12 flex justify-between items-center bg-black bg-opacity-50 shadow-md mt-16 backdrop-filter backdrop-blur-lg">
         <div className="text-sm">
           &copy; 2024 Tip A Friend. All rights reserved.
         </div>

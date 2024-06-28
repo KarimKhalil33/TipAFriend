@@ -1,26 +1,26 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
-    const { email, password } = await request.json();
+    const data = await req.json();
+    const { email, password } = data;
 
-    const res = await fetch('http://localhost:4000/api/flask/login', {
-      method: 'POST',
+    const response = await fetch("http://127.0.0.1:5000/api/flask/login", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({ email, password }),
     });
 
-    if (res.ok) {
-      const data = await res.json();
-      return NextResponse.json(data);
-    } else {
-      const errorData = await res.json();
-      return NextResponse.json({ error: errorData.message || 'Invalid credentials' }, { status: 401 });
+    if (!response.ok) {
+      const errorData = await response.json();
+      return NextResponse.json({ error: errorData.message }, { status: response.status });
     }
+
+    const responseData = await response.json();
+    return NextResponse.json(responseData);
   } catch (error) {
-    console.error('Error in API route:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
