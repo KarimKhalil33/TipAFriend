@@ -1,9 +1,18 @@
-import { Button } from "@/components/ui/button";
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function Home() {
+  const router = useRouter();
+
+  useEffect(() => {
+    router.push("/landing");
+  }, [router]);
+
   return (
     <main className="container mx-auto py-6">
-      <Button>Our Cool Button</Button>
+      <div>Redirecting...</div>
     </main>
   );
 }
