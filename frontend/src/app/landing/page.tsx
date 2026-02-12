@@ -253,7 +253,7 @@ export default function LandingPage() {
               className="p-8 rounded-2xl shadow-xl transform rotate-1 hover:rotate-0 transition-all duration-300"
               style={{ backgroundColor: "rgb(9, 13, 33)" }}
             >
-              <FaRegCheckCircle className="text-4xl text-white mb-4" />
+              <FaRegCheckCircle className="text-4xl text-green-400 mb-4" />
               <h3 className="text-2xl font-bold mb-4 text-white">
                 Task Examples
               </h3>
@@ -270,7 +270,7 @@ export default function LandingPage() {
               className="p-8 rounded-2xl shadow-xl transform -rotate-1 hover:rotate-0 transition-all duration-300"
               style={{ backgroundColor: "rgb(9, 13, 33)" }}
             >
-              <FaShieldAlt className="text-4xl text-white mb-4" />
+              <FaShieldAlt className="text-4xl text-blue-400 mb-4" />
               <h3 className="text-2xl font-bold mb-4 text-white">
                 Safety Features
               </h3>
