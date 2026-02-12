@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import Navbar from "@/components/Navbar";
 import {
   FaShieldAlt,
   FaBolt,
@@ -13,207 +14,386 @@ import {
 
 export default function LandingPage() {
   return (
-    <div className="relative flex flex-col items-center justify-center min-h-screen bg-gradient-to-r from-blue-900 to-indigo-900 text-white overflow-hidden">
-      <header className="w-full py-6 px-12 flex justify-between items-center bg-black bg-opacity-50 shadow-md mb-12 backdrop-filter backdrop-blur-lg">
-        <div className="text-2xl font-bold tracking-wide">
-          T<span className="text-blue-500">A</span>F
-        </div>
-        <nav className="space-x-6">
-          <Link href="/login">
-            <span className="hover:text-blue-500 cursor-pointer transition duration-300 ease-in-out">
-              Login
-            </span>
-          </Link>
-          <Link href="/signup">
-            <span className="hover:text-blue-500 cursor-pointer transition duration-300 ease-in-out">
-              Sign Up
-            </span>
-          </Link>
-        </nav>
-      </header>
-      <main className="relative z-10 flex flex-col items-center justify-center flex-1 px-20 text-center">
-        <section className="animate-fade-in-down">
-          <h2 className="text-6xl font-extrabold mb-6 text-blue-500">
-            Welcome to
-          </h2>
-          <h1 className="text-6xl font-extrabold mb-6">
-            Tip <span className="text-blue-500"> A </span> Friend
-          </h1>
-          <p className="text-xl mb-12 max-w-xl mx-auto text-gray-300">
-            Create and accept tasks from friends and get paid. Whether it's
-            cleaning dishes, picking up a pet, or cooking a meal, Tip A Friend
-            is here to make your life easier.
-          </p>
-          <Link href="/signup">
-            <Button className="mb-8 bg-blue-500 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-lg text-lg transition duration-300 ease-in-out transform hover:scale-105">
-              Get Started
-            </Button>
-          </Link>
-        </section>
-        <section className="w-full mt-16">
-          <h2 className="text-4xl font-bold mb-6 animate-fade-in-up text-blue-500">
-            Features
-          </h2>
-          <div className="flex justify-around flex-wrap gap-6">
-            <div className="bg-gray-800 bg-opacity-75 text-white p-8 rounded-xl shadow-lg max-w-xs transform transition duration-300 ease-in-out hover:scale-105 animate-fade-in-left">
-              <h3 className="text-2xl font-bold mb-4">Easy to Use</h3>
-              <p>
-                Create tasks easily and manage them with a user-friendly
-                interface.
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white text-gray-900">
+      {/* Subtle Wave Background */}
+      <div
+        className="absolute inset-0 z-0"
+        style={{ height: "100%", minHeight: "100vh" }}
+      >
+        {/* Gentle flowing waves */}
+        <svg
+          className="absolute top-0 left-0 w-full opacity-15"
+          height="100%"
+          viewBox="0 0 1000 1000"
+          xmlns="http://www.w3.org/2000/svg"
+          preserveAspectRatio="none"
+          style={{ height: "100%", minHeight: "100vh" }}
+        >
+          <path
+            d="M0,300 Q250,200 500,300 T1000,300 L1000,0 L0,0 Z"
+            fill="currentColor"
+            className="text-gray-300"
+          />
+          <path
+            d="M0,500 Q250,400 500,500 T1000,500 L1000,300 Q750,400 500,300 T0,300 Z"
+            fill="currentColor"
+            className="text-gray-400"
+          />
+          <path
+            d="M0,700 Q250,600 500,700 T1000,700 L1000,500 Q750,600 500,500 T0,500 Z"
+            fill="currentColor"
+            className="text-gray-500"
+          />
+          <path
+            d="M0,900 Q250,800 500,900 T1000,900 L1000,700 Q750,800 500,700 T0,700 Z"
+            fill="currentColor"
+            className="text-gray-400"
+          />
+          <path
+            d="M0,1000 Q250,950 500,1000 T1000,1000 L1000,900 Q750,950 500,900 T0,900 Z"
+            fill="currentColor"
+            className="text-gray-300"
+          />
+        </svg>
+
+        {/* Additional repeating pattern for extended content */}
+        <svg
+          className="absolute top-0 left-0 w-full opacity-10"
+          height="200%"
+          viewBox="0 0 1000 2000"
+          xmlns="http://www.w3.org/2000/svg"
+          preserveAspectRatio="none"
+          style={{ height: "200%" }}
+        >
+          <path
+            d="M0,1200 Q250,1100 500,1200 T1000,1200 L1000,1000 Q750,1100 500,1000 T0,1000 Z"
+            fill="currentColor"
+            className="text-gray-300"
+          />
+          <path
+            d="M0,1500 Q250,1400 500,1500 T1000,1500 L1000,1200 Q750,1300 500,1200 T0,1200 Z"
+            fill="currentColor"
+            className="text-gray-400"
+          />
+          <path
+            d="M0,1800 Q250,1700 500,1800 T1000,1800 L1000,1500 Q750,1600 500,1500 T0,1500 Z"
+            fill="currentColor"
+            className="text-gray-300"
+          />
+          <path
+            d="M0,2000 Q250,1950 500,2000 T1000,2000 L1000,1800 Q750,1900 500,1800 T0,1800 Z"
+            fill="currentColor"
+            className="text-gray-400"
+          />
+        </svg>
+      </div>
+      <Navbar />
+      <main className="relative z-10 flex flex-col items-center justify-center pt-20 px-8 text-center pb-8">
+        {/* Hero + Features Combined Section */}
+        <section className="w-full max-w-7xl mx-auto mb-20">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-center">
+            {/* Main Hero */}
+            <div
+              className="lg:col-span-2 animate-fade-in-down rounded-3xl shadow-2xl p-12 transform hover:scale-105 transition-transform duration-500"
+              style={{ backgroundColor: "rgb(9, 13, 33)" }}
+            >
+              <h2 className="text-4xl font-bold mb-3 text-white">Welcome to</h2>
+              <h1 className="text-5xl font-extrabold mb-6 text-white">
+                Tip <span className="text-white"> A </span> Friend
+              </h1>
+              <p className="text-lg mb-8 text-gray-300">
+                Create and accept tasks from friends and get paid. Whether it's
+                cleaning dishes, picking up a pet, or cooking a meal, Tip A
+                Friend is here to make your life easier.
               </p>
+              <Link href="/signup">
+                <Button className="bg-gray-900 text-white font-bold py-3 px-8 rounded-lg text-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-lg hover:opacity-90">
+                  Get Started
+                </Button>
+              </Link>
             </div>
-            <div className="bg-gray-800 bg-opacity-75 text-white p-8 rounded-xl shadow-lg max-w-xs transform transition duration-300 ease-in-out hover:scale-105 animate-fade-in-up">
-              <h3 className="text-2xl font-bold mb-4">Secure Payments</h3>
-              <p>Use trusted payment gateways to ensure safe transactions.</p>
-            </div>
-            <div className="bg-gray-800 bg-opacity-75 text-white p-8 rounded-xl shadow-lg max-w-xs transform transition duration-300 ease-in-out hover:scale-105 animate-fade-in-right">
-              <h3 className="text-2xl font-bold mb-4">Real-Time Updates</h3>
-              <p>Receive notifications and updates on your tasks instantly.</p>
+
+            {/* Quick Features - Staggered */}
+            <div className="space-y-6">
+              <div
+                className="text-white p-6 rounded-2xl shadow-xl transform transition duration-300 ease-in-out hover:scale-105 animate-fade-in-right -rotate-2 hover:rotate-0"
+                style={{
+                  backgroundColor: "rgb(9, 13, 33)",
+                  marginLeft: "10px",
+                }}
+              >
+                <h3 className="text-xl font-bold mb-2 text-white">
+                  Easy to Use
+                </h3>
+                <p className="text-sm text-gray-300">
+                  User-friendly interface for quick task management
+                </p>
+              </div>
+              <div
+                className="text-white p-6 rounded-2xl shadow-xl transform transition duration-300 ease-in-out hover:scale-105 animate-fade-in-right rotate-1 hover:rotate-0"
+                style={{
+                  backgroundColor: "rgb(9, 13, 33)",
+                  marginRight: "15px",
+                  animationDelay: "0.2s",
+                }}
+              >
+                <h3 className="text-xl font-bold mb-2 text-white">
+                  Secure Payments
+                </h3>
+                <p className="text-sm text-gray-300">
+                  Trusted payment gateways for safe transactions
+                </p>
+              </div>
+              <div
+                className="text-white p-6 rounded-2xl shadow-xl transform transition duration-300 ease-in-out hover:scale-105 animate-fade-in-right -rotate-1 hover:rotate-0"
+                style={{
+                  backgroundColor: "rgb(9, 13, 33)",
+                  marginLeft: "20px",
+                  animationDelay: "0.4s",
+                }}
+              >
+                <h3 className="text-xl font-bold mb-2 text-white">
+                  Real-Time Updates
+                </h3>
+                <p className="text-sm text-gray-300">
+                  Instant notifications on task progress
+                </p>
+              </div>
             </div>
           </div>
         </section>
-        <section className="w-full mt-16 animate-fade-in-up">
-          <h2 className="text-4xl font-bold mb-6 text-blue-500">
-            Why Choose Us?
-          </h2>
-          <div className="flex justify-around flex-wrap gap-6">
-            <div className="bg-gray-800 bg-opacity-75 text-white p-8 rounded-xl shadow-lg max-w-xs transform transition duration-300 ease-in-out hover:scale-105">
-              <FaShieldAlt className="text-blue-500 text-4xl mb-4" />
-              <h3 className="text-2xl font-bold mb-4">Secure</h3>
-              <p>
-                Top-notch security protocols to protect your data and
-                transactions.
+
+        {/* How to Use TAF Section */}
+        <section className="w-full max-w-7xl mx-auto mb-20">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold mb-4 text-gray-800">
+              How to Use TAF
+            </h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Get started with Tip A Friend in just a few simple steps
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {/* Step 1 */}
+            <div
+              className="text-center p-8 rounded-2xl shadow-xl transform hover:scale-105 transition-all duration-300 animate-fade-in-up"
+              style={{ backgroundColor: "rgb(9, 13, 33)" }}
+            >
+              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-6">
+                <span className="text-2xl font-bold text-gray-800">1</span>
+              </div>
+              <h3 className="text-xl font-bold mb-4 text-white">Sign Up</h3>
+              <p className="text-gray-300">
+                Create your account and build your profile to get started with
+                the community
               </p>
             </div>
-            <div className="bg-gray-800 bg-opacity-75 text-white p-8 rounded-xl shadow-lg max-w-xs transform transition duration-300 ease-in-out hover:scale-105">
-              <FaBolt className="text-blue-500 text-4xl mb-4" />
-              <h3 className="text-2xl font-bold mb-4">Fast</h3>
-              <p>
-                Experience lightning-fast transactions and real-time updates.
+
+            {/* Step 2 */}
+            <div
+              className="text-center p-8 rounded-2xl shadow-xl transform hover:scale-105 transition-all duration-300 animate-fade-in-up"
+              style={{
+                backgroundColor: "rgb(9, 13, 33)",
+                animationDelay: "0.1s",
+              }}
+            >
+              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-6">
+                <span className="text-2xl font-bold text-gray-800">2</span>
+              </div>
+              <h3 className="text-xl font-bold mb-4 text-white">Add Friends</h3>
+              <p className="text-gray-300">
+                Connect with your friends to create a trusted network for task
+                sharing
               </p>
             </div>
-            <div className="bg-gray-800 bg-opacity-75 text-white p-8 rounded-xl shadow-lg max-w-xs transform transition duration-300 ease-in-out hover:scale-105">
-              <FaUsers className="text-blue-500 text-4xl mb-4" />
-              <h3 className="text-2xl font-bold mb-4">Community</h3>
-              <p>
-                Join a growing community of users who trust Tip A Friend for
-                their tasks.
+
+            {/* Step 3 */}
+            <div
+              className="text-center p-8 rounded-2xl shadow-xl transform hover:scale-105 transition-all duration-300 animate-fade-in-up"
+              style={{
+                backgroundColor: "rgb(9, 13, 33)",
+                animationDelay: "0.2s",
+              }}
+            >
+              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-6">
+                <span className="text-2xl font-bold text-gray-800">3</span>
+              </div>
+              <h3 className="text-xl font-bold mb-4 text-white">
+                Create Tasks
+              </h3>
+              <p className="text-gray-300">
+                Post tasks you need help with or browse tasks from friends you
+                can complete
+              </p>
+            </div>
+
+            {/* Step 4 */}
+            <div
+              className="text-center p-8 rounded-2xl shadow-xl transform hover:scale-105 transition-all duration-300 animate-fade-in-up"
+              style={{
+                backgroundColor: "rgb(9, 13, 33)",
+                animationDelay: "0.3s",
+              }}
+            >
+              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-6">
+                <span className="text-2xl font-bold text-gray-800">4</span>
+              </div>
+              <h3 className="text-xl font-bold mb-4 text-white">Get Paid</h3>
+              <p className="text-gray-300">
+                Complete tasks and earn money, or pay friends for helping you
+                out
               </p>
             </div>
           </div>
-        </section>
-        <section className="w-full mt-16 bg-black bg-opacity-75 py-12 rounded-lg animate-fade-in-up">
-          <h2 className="text-4xl font-bold mb-6 text-blue-500">
-            How It Works
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 px-8">
-            <div className="bg-gray-800 bg-opacity-75 text-white p-6 rounded-lg shadow-lg transform transition duration-300 ease-in-out hover:scale-105">
-              <FaRegCheckCircle className="text-blue-500 text-4xl mb-4" />
-              <h3 className="text-2xl font-bold mb-4">1. Sign Up</h3>
-              <p>
-                Create an account quickly and easily with our user-friendly
-                registration process.
-              </p>
+
+          {/* Additional Info Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-12">
+            <div
+              className="p-8 rounded-2xl shadow-xl transform rotate-1 hover:rotate-0 transition-all duration-300"
+              style={{ backgroundColor: "rgb(9, 13, 33)" }}
+            >
+              <FaRegCheckCircle className="text-4xl text-white mb-4" />
+              <h3 className="text-2xl font-bold mb-4 text-white">
+                Task Examples
+              </h3>
+              <ul className="text-gray-300 space-y-2">
+                <li>• Cleaning dishes - $15</li>
+                <li>• Pet pickup from vet - $25</li>
+                <li>• Grocery shopping - $20</li>
+                <li>• House sitting - $40</li>
+                <li>• Cooking a meal - $30</li>
+              </ul>
             </div>
-            <div className="bg-gray-800 bg-opacity-75 text-white p-6 rounded-lg shadow-lg transform transition duration-300 ease-in-out hover:scale-105">
-              <FaRegCheckCircle className="text-blue-500 text-4xl mb-4" />
-              <h3 className="text-2xl font-bold mb-4">2. Connect</h3>
-              <p>
-                Connect with your friends and start sending and receiving tasks
-                effortlessly.
-              </p>
-            </div>
-            <div className="bg-gray-800 bg-opacity-75 text-white p-6 rounded-lg shadow-lg transform transition duration-300 ease-in-out hover:scale-105">
-              <FaRegCheckCircle className="text-blue-500 text-4xl mb-4" />
-              <h3 className="text-2xl font-bold mb-4">3. Enjoy</h3>
-              <p>
-                Enjoy the seamless experience of managing tasks with your
-                friends.
-              </p>
-            </div>
-          </div>
-        </section>
-        <section className="w-full mt-16 animate-fade-in-up">
-          <h2 className="text-4xl font-bold mb-6 text-blue-500">Our Mission</h2>
-          <p className="text-xl max-w-3xl mx-auto text-gray-300">
-            Our mission is to create an application where users can create
-            friend connections that interact with one another by creating or
-            accepting paid tasks. Whether it's cleaning dishes for $x, picking
-            up a pet from the vet for $x, or any other task, Tip A Friend makes
-            it possible.
-          </p>
-        </section>
-        <section className="w-full mt-16 animate-fade-in-up">
-          <h2 className="text-4xl font-bold mb-6 text-blue-500">
-            Why Tip A Friend?
-          </h2>
-          <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="bg-gray-800 bg-opacity-75 text-white p-8 rounded-lg shadow-lg transform transition duration-300 ease-in-out hover:scale-105">
-              <h3 className="text-2xl font-bold mb-4">More Safety</h3>
-              <p>
-                Only interact with trusted friends, ensuring a safer experience.
-              </p>
-            </div>
-            <div className="bg-gray-800 bg-opacity-75 text-white p-8 rounded-lg shadow-lg transform transition duration-300 ease-in-out hover:scale-105">
-              <h3 className="text-2xl font-bold mb-4">More Enjoyable</h3>
-              <p>
-                Engage in tasks with friends, making the experience more
-                enjoyable.
-              </p>
-            </div>
-            <div className="bg-gray-800 bg-opacity-75 text-white p-8 rounded-lg shadow-lg transform transition duration-300 ease-in-out hover:scale-105">
-              <h3 className="text-2xl font-bold mb-4">More Interactive</h3>
-              <p>Create and accept tasks in a dynamic and interactive way.</p>
-            </div>
-            <div className="bg-gray-800 bg-opacity-75 text-white p-8 rounded-lg shadow-lg transform transition duration-300 ease-in-out hover:scale-105">
-              <h3 className="text-2xl font-bold mb-4">Friends' Rates</h3>
-              <p>Benefit from friends' rates, making tasks more affordable.</p>
+
+            <div
+              className="p-8 rounded-2xl shadow-xl transform -rotate-1 hover:rotate-0 transition-all duration-300"
+              style={{ backgroundColor: "rgb(9, 13, 33)" }}
+            >
+              <FaShieldAlt className="text-4xl text-white mb-4" />
+              <h3 className="text-2xl font-bold mb-4 text-white">
+                Safety Features
+              </h3>
+              <ul className="text-gray-300 space-y-2">
+                <li>• Friends-only network</li>
+                <li>• Secure payment processing</li>
+                <li>• Task completion tracking</li>
+                <li>• Review and rating system</li>
+                <li>• 24/7 support available</li>
+              </ul>
             </div>
           </div>
         </section>
-        <section className="w-full mt-16 bg-blue-800 bg-opacity-75 py-12 rounded-lg animate-fade-in-up">
-          <h2 className="text-4xl font-bold mb-6 text-yellow-400">
-            What Our Users Say
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 px-8">
-            <div className="bg-gray-700 bg-opacity-75 text-white p-6 rounded-lg shadow-lg transform transition duration-300 ease-in-out hover:scale-105">
-              <FaStar className="text-yellow-400 text-4xl mb-4" />
-              <h3 className="text-2xl font-bold mb-4">Alice Johnson</h3>
-              <p>
-                "Tip A Friend has made my life so much easier. I can easily get
-                help from friends for various tasks and even earn a little
-                extra!"
+
+        {/* Mission + Benefits Combined */}
+        <section className="w-full max-w-7xl mx-auto mb-20">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
+            {/* Mission Statement - Larger with tilt */}
+            <div
+              className="lg:col-span-2 rounded-3xl p-10 shadow-2xl transform hover:scale-105 transition-transform duration-500 animate-fade-in-left"
+              style={{ backgroundColor: "rgb(9, 13, 33)" }}
+            >
+              <h2 className="text-4xl font-bold mb-6 text-white">
+                Our Mission
+              </h2>
+              <p className="text-gray-300 leading-relaxed text-lg">
+                Our mission is to create an application where users can create
+                friend connections that interact with one another by creating or
+                accepting paid tasks. Whether it's cleaning dishes for $x,
+                picking up a pet from the vet for $x, or any other task, Tip A
+                Friend makes it possible.
               </p>
             </div>
-            <div className="bg-gray-700 bg-opacity-75 text-white p-6 rounded-lg shadow-lg transform transition duration-300 ease-in-out hover:scale-105">
-              <FaThumbsUp className="text-yellow-400 text-4xl mb-4" />
-              <h3 className="text-2xl font-bold mb-4">John Smith</h3>
-              <p>
-                "The secure payment feature is fantastic. I feel safe
-                transacting through the app and the real-time updates keep me
-                informed."
-              </p>
+
+            {/* Benefits Grid - Staggered Heights */}
+            <div className="lg:col-span-3">
+              <h2 className="text-4xl font-bold mb-10 text-gray-800 text-center">
+                Why Tip A Friend?
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div
+                  className="text-white p-8 rounded-2xl shadow-xl transform -rotate-1 hover:rotate-0 transition-all duration-300 animate-fade-in-up"
+                  style={{
+                    backgroundColor: "rgb(9, 13, 33)",
+                    marginTop: "0px",
+                  }}
+                >
+                  <h3 className="text-xl font-bold mb-3 text-white">
+                    More Safety
+                  </h3>
+                  <p className="text-gray-300">
+                    Only interact with trusted friends, ensuring a safer
+                    experience.
+                  </p>
+                </div>
+                <div
+                  className="text-white p-8 rounded-2xl shadow-xl transform rotate-1 hover:rotate-0 transition-all duration-300 animate-fade-in-up"
+                  style={{
+                    backgroundColor: "rgb(9, 13, 33)",
+                    marginTop: "20px",
+                    animationDelay: "0.1s",
+                  }}
+                >
+                  <h3 className="text-xl font-bold mb-3 text-white">
+                    More Enjoyable
+                  </h3>
+                  <p className="text-gray-300">
+                    Engage in tasks with friends, making the experience more
+                    enjoyable.
+                  </p>
+                </div>
+                <div
+                  className="text-white p-8 rounded-2xl shadow-xl transform rotate-2 hover:rotate-0 transition-all duration-300 animate-fade-in-up"
+                  style={{
+                    backgroundColor: "rgb(9, 13, 33)",
+                    marginTop: "10px",
+                    animationDelay: "0.2s",
+                  }}
+                >
+                  <h3 className="text-xl font-bold mb-3 text-white">
+                    More Interactive
+                  </h3>
+                  <p className="text-gray-300">
+                    Create and accept tasks in a dynamic and interactive way.
+                  </p>
+                </div>
+                <div
+                  className="text-white p-8 rounded-2xl shadow-xl transform -rotate-2 hover:rotate-0 transition-all duration-300 animate-fade-in-up"
+                  style={{
+                    backgroundColor: "rgb(9, 13, 33)",
+                    marginTop: "30px",
+                    animationDelay: "0.3s",
+                  }}
+                >
+                  <h3 className="text-xl font-bold mb-3 text-white">
+                    Friends' Rates
+                  </h3>
+                  <p className="text-gray-300">
+                    Benefit from friends' rates, making tasks more affordable.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </section>
       </main>
-      <footer className="w-full py-6 px-12 flex justify-between items-center bg-black bg-opacity-50 shadow-md mt-16 backdrop-filter backdrop-blur-lg">
-        <div className="text-sm">
+      <footer className="w-full py-6 px-8 flex justify-between items-center bg-white bg-opacity-95 shadow-lg mt-8 backdrop-filter backdrop-blur-lg relative z-20">
+        <div className="text-sm text-gray-600">
           &copy; 2024 Tip A Friend. All rights reserved.
         </div>
         <nav className="space-x-6 text-sm">
           <Link href="/privacy">
-            <span className="hover:text-blue-500 cursor-pointer transition duration-300 ease-in-out">
+            <span className="hover:text-blue-600 cursor-pointer transition duration-300 ease-in-out text-gray-700">
               Privacy Policy
             </span>
           </Link>
           <Link href="/terms">
-            <span className="hover:text-blue-500 cursor-pointer transition duration-300 ease-in-out">
+            <span className="hover:text-blue-600 cursor-pointer transition duration-300 ease-in-out text-gray-700">
               Terms of Service
             </span>
           </Link>
           <Link href="/contact">
-            <span className="hover:text-blue-500 cursor-pointer transition duration-300 ease-in-out">
+            <span className="hover:text-blue-600 cursor-pointer transition duration-300 ease-in-out text-gray-700">
               Contact Us
             </span>
           </Link>
