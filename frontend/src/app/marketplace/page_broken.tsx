@@ -51,6 +51,7 @@ export default function MarketplacePage() {
   }, [isAuthenticated, router]);
 
   const loadFeed = useCallback(async () => {
+  const loadFeed = useCallback(async () => {
     try {
       setLoading(true);
       const params: any = {
@@ -212,8 +213,7 @@ export default function MarketplacePage() {
               Marketplace
             </h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Browse tasks from your friends network - find help or offer your
-              services
+              Browse tasks from your friends network - find help or offer your services
             </p>
           </div>
 
@@ -261,11 +261,7 @@ export default function MarketplacePage() {
                     {types.map((type) => (
                       <button
                         key={type.id}
-                        onClick={() =>
-                          setSelectedType(
-                            type.id as "all" | "REQUEST" | "OFFER",
-                          )
-                        }
+                        onClick={() => setSelectedType(type.id as "all" | "REQUEST" | "OFFER")}
                         className={`w-full text-left p-3 rounded-lg transition-all duration-200 ${
                           selectedType === type.id
                             ? "text-white"
@@ -302,7 +298,7 @@ export default function MarketplacePage() {
                     {categories.map((category) => (
                       <button
                         key={category.id}
-                        onClick={() => setSelectedCategory(category.id)}
+                        onClick={() => setSelectedCategory(category.id as string)}
                         className={`w-full text-left p-3 rounded-lg transition-all duration-200 ${
                           selectedCategory === category.id
                             ? "text-white"
@@ -379,9 +375,7 @@ export default function MarketplacePage() {
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
                               <span className="text-white font-bold text-sm">
-                                {post.author.displayName
-                                  .charAt(0)
-                                  .toUpperCase()}
+                                {post.author.displayName.charAt(0).toUpperCase()}
                               </span>
                             </div>
                             <div>
@@ -426,9 +420,7 @@ export default function MarketplacePage() {
                           {post.scheduledTime && (
                             <div className="flex items-center gap-1 text-blue-600">
                               <FaClock />
-                              <span>
-                                Scheduled: {formatDate(post.scheduledTime)}
-                              </span>
+                              <span>Scheduled: {formatDate(post.scheduledTime)}</span>
                             </div>
                           )}
                         </div>
@@ -436,7 +428,7 @@ export default function MarketplacePage() {
                         {post.category && (
                           <div className="mb-4">
                             <span className="inline-block px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
-                              {post.category.replace("_", " ")}
+                              {post.category.replace('_', ' ')}
                             </span>
                           </div>
                         )}
@@ -449,7 +441,7 @@ export default function MarketplacePage() {
                                 {post.price}
                               </span>
                               <span className="text-sm font-medium text-gray-600">
-                                {post.paymentType || "FIXED"}
+                                {post.paymentType || 'FIXED'}
                               </span>
                             </div>
                           ) : (
@@ -465,12 +457,10 @@ export default function MarketplacePage() {
                                   : "bg-green-600 hover:bg-green-700"
                               } text-white`}
                               onClick={() => {
-                                console.log("Post clicked:", post.id);
+                                console.log('Post clicked:', post.id);
                               }}
                             >
-                              {post.type === "REQUEST"
-                                ? "Help Out"
-                                : "View Details"}
+                              {post.type === "REQUEST" ? "Help Out" : "View Details"}
                             </Button>
                             <button className="p-2 text-gray-400 hover:text-red-400 transition-colors">
                               <FaHeart />
@@ -482,20 +472,14 @@ export default function MarketplacePage() {
                         </div>
 
                         <div className="mt-3 pt-3 border-t border-gray-100">
-                          <span
-                            className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                              post.status === "OPEN"
-                                ? "bg-green-100 text-green-800"
-                                : post.status === "ACCEPTED"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : post.status === "IN_PROGRESS"
-                                    ? "bg-yellow-100 text-yellow-800"
-                                    : post.status === "COMPLETED"
-                                      ? "bg-purple-100 text-purple-800"
-                                      : "bg-gray-100 text-gray-800"
-                            }`}
-                          >
-                            {post.status.replace("_", " ")}
+                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                            post.status === 'OPEN' ? 'bg-green-100 text-green-800' :
+                            post.status === 'ACCEPTED' ? 'bg-blue-100 text-blue-800' :
+                            post.status === 'IN_PROGRESS' ? 'bg-yellow-100 text-yellow-800' :
+                            post.status === 'COMPLETED' ? 'bg-purple-100 text-purple-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {post.status.replace('_', ' ')}
                           </span>
                         </div>
                       </div>
@@ -503,7 +487,7 @@ export default function MarketplacePage() {
                   ))}
                 </div>
               )}
-
+              
               {/* Pagination */}
               {totalPages > 1 && (
                 <div className="mt-8 flex justify-center gap-2">

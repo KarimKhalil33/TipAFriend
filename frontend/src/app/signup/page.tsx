@@ -12,36 +12,31 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function SignUpPage() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { register } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setLoading(true);
 
     try {
-      const res = await fetch("http://127.0.0.1:5000/api/flask/users", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ username, email, password }),
-      });
-
-      if (res.ok) {
-        router.push("/dashboard");
-      } else {
-        const data = await res.json();
-        setError(data.message || "Failed to create user");
-      }
-    } catch (error) {
-      console.error("Error:", error);
-      setError("An unexpected error occurred");
+      await register(email, username, password, displayName);
+      router.push("/marketplace");
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      setError(error.message || "An unexpected error occurred");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -132,6 +127,19 @@ export default function SignUpPage() {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     className="bg-gray-900 text-white outline-none flex-1"
+                    required
+                  />
+                </div>
+                <div className="bg-gray-900 w-full max-w-md p-4 flex items-center rounded-md shadow-md">
+                  <FaRegEnvelope className="text-gray-400 mr-3" />
+                  <input
+                    type="text"
+                    name="displayName"
+                    placeholder="Display Name"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    className="bg-gray-900 text-white outline-none flex-1"
+                    required
                   />
                 </div>
                 <div className="bg-gray-900 w-full max-w-md p-4 flex items-center rounded-md shadow-md">
@@ -143,6 +151,7 @@ export default function SignUpPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="bg-gray-900 text-white outline-none flex-1"
+                    required
                   />
                 </div>
                 <div className="bg-gray-900 w-full max-w-md p-4 flex items-center rounded-md shadow-md">
@@ -154,15 +163,18 @@ export default function SignUpPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="bg-gray-900 text-white outline-none flex-1"
+                    required
+                    minLength={6}
                   />
                 </div>
                 {error && <p className="text-red-500">{error}</p>}
                 <Button
                   type="submit"
-                  className="w-full max-w-md text-white font-bold py-4 px-8 rounded-md transition duration-300 ease-in-out transform hover:scale-105 hover:opacity-90"
+                  disabled={loading}
+                  className="w-full max-w-md text-white font-bold py-4 px-8 rounded-md transition duration-300 ease-in-out transform hover:scale-105 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{ backgroundColor: "rgb(9, 13, 33)" }}
                 >
-                  Sign Up
+                  {loading ? "Creating Account..." : "Sign Up"}
                 </Button>
               </form>
             </div>

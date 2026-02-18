@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
+import { useAuth } from "@/contexts/AuthContext";
+import { postsApi, Post } from "@/lib/api";
+import { useRouter } from "next/navigation";
 import {
   FaSearch,
   FaMapMarkerAlt,
@@ -16,193 +19,76 @@ import {
   FaComment,
 } from "react-icons/fa";
 
-interface Task {
-  id: number;
-  title: string;
-  description: string;
-  price: number;
-  currency: string;
-  location: string;
-  timePosted: string;
-  scheduledTime: string;
-  category: string;
-  poster: {
-    name: string;
-    avatar: string;
-    rating: number;
-  };
-  type: "request" | "offer";
+interface FeedResponse {
+  content: Post[];
+  totalElements: number;
+  totalPages: number;
 }
 
 export default function DashboardPage() {
-  const [selectedCategory, setSelectedCategory] = useState("all");
-  const [selectedType, setSelectedType] = useState("all");
-  const [searchTerm, setSearchTerm] = useState("");
+  const [activeTab, setActiveTab] = useState<"my-posts" | "accepted">(
+    "my-posts",
+  );
+  const [myPosts, setMyPosts] = useState<Post[]>([]);
+  const [acceptedPosts, setAcceptedPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  // Mock data for tasks - mixed requests and offers
-  const [tasks] = useState<Task[]>([
-    {
-      id: 1,
-      title: "Need someone to clean my apartment",
-      description:
-        "Looking for someone to deep clean my 2-bedroom apartment. Must bring own supplies.",
-      price: 80,
-      currency: "USD",
-      location: "United States, New York, Downtown Manhattan",
-      timePosted: "2 hours ago",
-      scheduledTime: "Feb 15, 2026 at 2:00 PM EST",
-      category: "cleaning",
-      poster: {
-        name: "Sarah M.",
-        avatar: "SM",
-        rating: 4.8,
-      },
-      type: "request",
-    },
-    {
-      id: 2,
-      title: "Offering pet sitting services",
-      description:
-        "Experienced pet sitter available for weekends. Great with dogs and cats!",
-      price: 45,
-      currency: "CAD",
-      location: "Canada, Toronto, Midtown",
-      timePosted: "4 hours ago",
-      scheduledTime: "Feb 14, 2026 at 6:00 PM EST",
-      category: "pet-care",
-      poster: {
-        name: "Mike R.",
-        avatar: "MR",
-        rating: 4.9,
-      },
-      type: "offer",
-    },
-    {
-      id: 3,
-      title: "Grocery shopping needed",
-      description:
-        "Need someone to do grocery shopping for elderly parent. List will be provided.",
-      price: 35,
-      currency: "USD",
-      location: "United States, Boston, Uptown",
-      timePosted: "1 day ago",
-      scheduledTime: "Feb 13, 2026 at 10:00 AM EST",
-      category: "shopping",
-      poster: {
-        name: "Emma L.",
-        avatar: "EL",
-        rating: 4.7,
-      },
-      type: "request",
-    },
-    {
-      id: 4,
-      title: "Available for moving help",
-      description:
-        "Strong and reliable, available to help with furniture moving. Own truck available.",
-      price: 120,
-      currency: "CAD",
-      location: "Canada, Vancouver, West End",
-      timePosted: "3 hours ago",
-      scheduledTime: "Feb 16, 2026 at 9:00 AM PST",
-      category: "moving",
-      poster: {
-        name: "James T.",
-        avatar: "JT",
-        rating: 4.6,
-      },
-      type: "offer",
-    },
-    {
-      id: 5,
-      title: "Need meal prep cooking",
-      description:
-        "Looking for someone to prepare 5 healthy meals. Ingredients will be provided.",
-      price: 75,
-      currency: "EUR",
-      location: "Germany, Berlin, East Side",
-      timePosted: "6 hours ago",
-      scheduledTime: "Feb 14, 2026 at 4:00 PM CET",
-      category: "cooking",
-      poster: {
-        name: "Lisa K.",
-        avatar: "LK",
-        rating: 4.8,
-      },
-      type: "request",
-    },
-    {
-      id: 6,
-      title: "Offering house cleaning services",
-      description:
-        "Professional cleaner available weekdays. Eco-friendly products used.",
-      price: 95,
-      currency: "AUD",
-      location: "Australia, Sydney, Downtown",
-      timePosted: "1 day ago",
-      scheduledTime: "Feb 17, 2026 at 11:00 AM AEDT",
-      category: "cleaning",
-      poster: {
-        name: "Ana C.",
-        avatar: "AC",
-        rating: 4.9,
-      },
-      type: "offer",
-    },
-  ]);
+  const { user, isAuthenticated } = useAuth();
+  const router = useRouter();
 
-  const categories = [
-    { id: "all", name: "All Categories", count: tasks.length },
-    {
-      id: "cleaning",
-      name: "Cleaning",
-      count: tasks.filter((t) => t.category === "cleaning").length,
-    },
-    {
-      id: "pet-care",
-      name: "Pet Care",
-      count: tasks.filter((t) => t.category === "pet-care").length,
-    },
-    {
-      id: "shopping",
-      name: "Shopping",
-      count: tasks.filter((t) => t.category === "shopping").length,
-    },
-    {
-      id: "moving",
-      name: "Moving",
-      count: tasks.filter((t) => t.category === "moving").length,
-    },
-    {
-      id: "cooking",
-      name: "Cooking",
-      count: tasks.filter((t) => t.category === "cooking").length,
-    },
-  ];
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push("/login");
+      return;
+    }
+  }, [isAuthenticated, router]);
 
-  const types = [
-    { id: "all", name: "All Posts", count: tasks.length },
-    {
-      id: "request",
-      name: "Requests",
-      count: tasks.filter((t) => t.type === "request").length,
-    },
-    {
-      id: "offer",
-      name: "Offers",
-      count: tasks.filter((t) => t.type === "offer").length,
-    },
-  ];
+  const loadMyPosts = useCallback(async () => {
+    try {
+      setLoading(true);
+      // TODO: Implement getUserPosts API call
+      // const response = await postsApi.getUserPosts(user.id);
+      // setMyPosts(response);
+      setMyPosts([]); // Placeholder until API is implemented
+      setError("");
+    } catch (error: any) {
+      console.error("Error loading my posts:", error);
+      setError("Failed to load your posts.");
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
 
-  const filteredTasks = tasks.filter((task) => {
-    const matchesCategory =
-      selectedCategory === "all" || task.category === selectedCategory;
-    const matchesType = selectedType === "all" || task.type === selectedType;
-    const matchesSearch =
-      task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.description.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesCategory && matchesType && matchesSearch;
-  });
+  const loadAcceptedPosts = useCallback(async () => {
+    try {
+      setLoading(true);
+      // TODO: Implement getAcceptedPosts API call
+      // const response = await postsApi.getAcceptedPosts(user.id);
+      // setAcceptedPosts(response);
+      setAcceptedPosts([]); // Placeholder until API is implemented
+      setError("");
+    } catch (error: any) {
+      console.error("Error loading accepted posts:", error);
+      setError("Failed to load accepted posts.");
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (activeTab === "my-posts") {
+      loadMyPosts();
+    } else {
+      loadAcceptedPosts();
+    }
+  }, [activeTab, loadMyPosts, loadAcceptedPosts]);
+
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  const currentPosts = activeTab === "my-posts" ? myPosts : acceptedPosts;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white text-gray-900">
@@ -236,258 +122,236 @@ export default function DashboardPage() {
 
       <main className="relative z-10 pt-20 px-8 pb-8">
         <div className="max-w-7xl mx-auto">
-          {/* Header */}
+          {/* Profile Header */}
           <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold mb-4 text-gray-800">
-              Your Dashboard
+            <div className="w-24 h-24 mx-auto mb-6 rounded-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
+              <span className="text-white font-bold text-2xl">
+                {user?.displayName?.charAt(0).toUpperCase() || "U"}
+              </span>
+            </div>
+            <h1 className="text-4xl font-bold mb-2 text-gray-800">
+              {user?.displayName || "User"}
             </h1>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Browse tasks from your friends network - find help or offer your
-              services
+            <p className="text-xl text-gray-600">
+              @{user?.username || "username"}
+            </p>
+            <p className="text-lg text-gray-500 mt-2">
+              Your Profile & Activity
             </p>
           </div>
 
-          {/* Search and Filter Bar */}
-          <div className="bg-white rounded-2xl shadow-xl p-6 mb-8">
-            <div className="flex flex-col lg:flex-row gap-4 items-center">
-              <div className="flex-1 relative">
-                <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
-                <input
-                  type="text"
-                  placeholder="Search tasks in your network..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-gray-50 text-gray-800 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3">
-                  <FaFilter className="mr-2" />
-                  Filters
-                </Button>
-                <Link href="/create-post">
-                  <Button className="bg-green-600 hover:bg-green-700 text-white px-6 py-3">
-                    <FaPlus className="mr-2" />
-                    Post Task
-                  </Button>
-                </Link>
-              </div>
+          {/* Tab Navigation */}
+          <div className="bg-white rounded-2xl shadow-xl p-2 mb-8 max-w-md mx-auto">
+            <div className="flex">
+              <button
+                onClick={() => setActiveTab("my-posts")}
+                className={`flex-1 px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                  activeTab === "my-posts"
+                    ? "bg-blue-600 text-white"
+                    : "text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                My Posts
+              </button>
+              <button
+                onClick={() => setActiveTab("accepted")}
+                className={`flex-1 px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                  activeTab === "accepted"
+                    ? "bg-green-600 text-white"
+                    : "text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                Accepted Tasks
+              </button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            {/* Filters Sidebar */}
-            <div className="lg:col-span-1 space-y-6">
-              {/* Type Filter */}
-              <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-                {/* Blue Header */}
-                <div
-                  className="p-6 pb-4"
-                  style={{ backgroundColor: "rgb(9, 13, 33)" }}
-                >
-                  <h3 className="text-xl font-bold text-white">Type</h3>
-                </div>
-                {/* White Content */}
-                <div className="p-6 pt-4 bg-white">
-                  <div className="space-y-2">
-                    {types.map((type) => (
-                      <button
-                        key={type.id}
-                        onClick={() => setSelectedType(type.id)}
-                        className={`w-full text-left p-3 rounded-lg transition-all duration-200 ${
-                          selectedType === type.id
-                            ? "text-white"
-                            : "text-gray-700 hover:bg-gray-100"
-                        }`}
-                        style={
-                          selectedType === type.id
-                            ? { backgroundColor: "rgb(9, 13, 33)" }
-                            : {}
-                        }
-                      >
-                        <div className="flex justify-between items-center">
-                          <span>{type.name}</span>
-                          <span className="text-sm opacity-75">
-                            ({type.count})
-                          </span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="bg-white rounded-2xl shadow-xl p-6 text-center">
+              <div className="text-3xl font-bold text-blue-600 mb-2">
+                {myPosts.length}
               </div>
+              <div className="text-gray-600">Posts Created</div>
+            </div>
+            <div className="bg-white rounded-2xl shadow-xl p-6 text-center">
+              <div className="text-3xl font-bold text-green-600 mb-2">
+                {acceptedPosts.length}
+              </div>
+              <div className="text-gray-600">Tasks Accepted</div>
+            </div>
+            <div className="bg-white rounded-2xl shadow-xl p-6 text-center">
+              <div className="text-3xl font-bold text-purple-600 mb-2">
+                {user?.email ? "✓" : "✗"}
+              </div>
+              <div className="text-gray-600">Profile Complete</div>
+            </div>
+          </div>
 
-              {/* Categories Filter */}
-              <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-                {/* Blue Header */}
-                <div
-                  className="p-6 pb-4"
-                  style={{ backgroundColor: "rgb(9, 13, 33)" }}
-                >
-                  <h3 className="text-xl font-bold text-white">Categories</h3>
-                </div>
-                {/* White Content */}
-                <div className="p-6 pt-4 bg-white">
-                  <div className="space-y-2">
-                    {categories.map((category) => (
-                      <button
-                        key={category.id}
-                        onClick={() => setSelectedCategory(category.id)}
-                        className={`w-full text-left p-3 rounded-lg transition-all duration-200 ${
-                          selectedCategory === category.id
-                            ? "text-white"
-                            : "text-gray-700 hover:bg-gray-100"
-                        }`}
-                        style={
-                          selectedCategory === category.id
-                            ? { backgroundColor: "rgb(9, 13, 33)" }
-                            : {}
-                        }
-                      >
-                        <div className="flex justify-between items-center">
-                          <span>{category.name}</span>
-                          <span className="text-sm opacity-75">
-                            ({category.count})
-                          </span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
+          {/* Content Area */}
+          <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+            {/* Header */}
+            <div
+              className="p-6 pb-4"
+              style={{ backgroundColor: "rgb(9, 13, 33)" }}
+            >
+              <h2 className="text-2xl font-bold text-white">
+                {activeTab === "my-posts" ? "My Posts" : "Accepted Tasks"}
+              </h2>
+              <p className="text-gray-300 mt-1">
+                {activeTab === "my-posts"
+                  ? "Posts you've created"
+                  : "Tasks you've accepted to help with"}
+              </p>
             </div>
 
-            {/* Tasks Grid */}
-            <div className="lg:col-span-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {filteredTasks.map((task) => (
-                  <div
-                    key={task.id}
-                    className="bg-white rounded-2xl shadow-xl hover:scale-105 transition-all duration-300 relative overflow-hidden"
+            {/* Content */}
+            <div className="p-6 bg-white">
+              {loading ? (
+                <div className="flex justify-center items-center py-20">
+                  <div className="text-lg text-gray-600">Loading...</div>
+                </div>
+              ) : error ? (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                  <p className="text-red-600">{error}</p>
+                  <Button
+                    onClick={
+                      activeTab === "my-posts" ? loadMyPosts : loadAcceptedPosts
+                    }
+                    className="mt-2"
                   >
-                    {/* Type Badge */}
-                    <div className="absolute top-4 right-4 z-10">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          task.type === "request"
-                            ? "bg-blue-500 text-white"
-                            : "bg-green-500 text-white"
-                        }`}
-                      >
-                        {task.type === "request" ? "Request" : "Offer"}
-                      </span>
-                    </div>
-
-                    {/* Blue Header Section */}
+                    Try Again
+                  </Button>
+                </div>
+              ) : currentPosts.length === 0 ? (
+                <div className="text-center py-20">
+                  <div className="text-gray-400 text-6xl mb-4">
+                    {activeTab === "my-posts" ? "📝" : "🤝"}
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-600 mb-2">
+                    {activeTab === "my-posts"
+                      ? "No posts yet"
+                      : "No accepted tasks yet"}
+                  </h3>
+                  <p className="text-gray-500 mb-4">
+                    {activeTab === "my-posts"
+                      ? "Create your first post to get started!"
+                      : "Accept some tasks from the marketplace to help others!"}
+                  </p>
+                  {activeTab === "my-posts" && (
+                    <Link href="/create-post">
+                      <Button className="bg-green-600 hover:bg-green-700 text-white">
+                        <FaPlus className="mr-2" />
+                        Create Your First Post
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {currentPosts.map((post) => (
                     <div
-                      className="p-6 pb-4"
-                      style={{ backgroundColor: "rgb(9, 13, 33)" }}
+                      key={post.id}
+                      className="border border-gray-200 rounded-xl p-6 hover:shadow-lg transition-all duration-300"
                     >
-                      <div className="flex justify-between items-start pr-20">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="w-10 h-10 rounded-full flex items-center justify-center"
-                            style={{ backgroundColor: "rgb(9, 13, 33)" }}
-                          >
-                            <span className="text-white font-bold text-sm">
-                              {task.poster.avatar}
-                            </span>
-                          </div>
-                          <div>
-                            <h4 className="text-white font-semibold">
-                              {task.poster.name}
-                            </h4>
-                            <div className="flex items-center gap-1">
-                              <FaUser className="text-yellow-400 text-xs" />
-                              <span className="text-yellow-400 text-sm">
-                                {task.poster.rating}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
+                      {/* Post Header */}
+                      <div className="flex justify-between items-start mb-4">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                            post.type === "REQUEST"
+                              ? "bg-blue-100 text-blue-800"
+                              : "bg-green-100 text-green-800"
+                          }`}
+                        >
+                          {post.type === "REQUEST" ? "Request" : "Offer"}
+                        </span>
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            post.status === "OPEN"
+                              ? "bg-green-100 text-green-800"
+                              : post.status === "ACCEPTED"
+                                ? "bg-blue-100 text-blue-800"
+                                : post.status === "IN_PROGRESS"
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : post.status === "COMPLETED"
+                                    ? "bg-purple-100 text-purple-800"
+                                    : "bg-gray-100 text-gray-800"
+                          }`}
+                        >
+                          {post.status.replace("_", " ")}
+                        </span>
                       </div>
-                    </div>
 
-                    {/* White Content Section */}
-                    <div className="p-6 pt-4 bg-white">
-                      {/* Task Content */}
-                      <div className="mb-4">
-                        <h3 className="text-lg font-bold text-gray-800 mb-2">
-                          {task.title}
-                        </h3>
-                        <p className="text-gray-600 text-sm line-clamp-2">
-                          {task.description}
+                      {/* Post Content */}
+                      <h3 className="text-lg font-bold text-gray-800 mb-2">
+                        {post.title}
+                      </h3>
+                      {post.description && (
+                        <p className="text-gray-600 text-sm mb-4 line-clamp-3">
+                          {post.description}
                         </p>
-                      </div>
+                      )}
 
-                      {/* Task Details */}
+                      {/* Post Details */}
                       <div className="flex flex-wrap gap-3 text-sm text-gray-500 mb-4">
-                        <div className="flex items-center gap-1">
-                          <FaMapMarkerAlt />
-                          <span>{task.location}</span>
-                        </div>
+                        {post.locationName && (
+                          <div className="flex items-center gap-1">
+                            <FaMapMarkerAlt />
+                            <span>{post.locationName}</span>
+                          </div>
+                        )}
                         <div className="flex items-center gap-1">
                           <FaClock />
-                          <span>{task.scheduledTime}</span>
+                          <span>
+                            {new Date(post.createdAt).toLocaleDateString()}
+                          </span>
                         </div>
                       </div>
 
-                      {/* Price and Actions */}
+                      {/* Category and Price */}
                       <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-1 text-green-500">
-                          <span className="text-lg">
-                            {task.currency === "USD" ||
-                            task.currency === "CAD" ||
-                            task.currency === "AUD"
-                              ? "$"
-                              : task.currency === "EUR"
-                                ? "€"
-                                : task.currency === "GBP"
-                                  ? "£"
-                                  : "$"}
+                        {post.category && (
+                          <span className="inline-block px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
+                            {post.category.replace("_", " ")}
                           </span>
-                          <span className="text-2xl font-bold">
-                            {task.price}
-                          </span>
-                          <span className="text-sm font-medium text-gray-600">
-                            {task.currency}
-                          </span>
-                        </div>
+                        )}
+                        {post.price && (
+                          <div className="flex items-center gap-1 text-green-600">
+                            <FaDollarSign />
+                            <span className="font-bold">{post.price}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Actions */}
+                      <div className="mt-4 pt-4 border-t border-gray-100">
                         <div className="flex gap-2">
                           <Button
-                            className={`px-4 py-2 text-sm ${
-                              task.type === "request"
-                                ? "bg-blue-600 hover:bg-blue-700"
-                                : "bg-green-600 hover:bg-green-700"
-                            } text-white`}
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              // TODO: Navigate to post details or edit
+                              console.log("View post:", post.id);
+                            }}
                           >
-                            {task.type === "request"
-                              ? "Help Out"
-                              : "View Details"}
+                            View Details
                           </Button>
-                          <button className="p-2 text-gray-400 hover:text-red-400 transition-colors">
-                            <FaHeart />
-                          </button>
-                          <button className="p-2 text-gray-400 hover:text-blue-400 transition-colors">
-                            <FaComment />
-                          </button>
+                          {activeTab === "my-posts" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                // TODO: Navigate to edit post
+                                console.log("Edit post:", post.id);
+                              }}
+                            >
+                              Edit
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* No Results */}
-              {filteredTasks.length === 0 && (
-                <div className="text-center py-12">
-                  <div className="text-gray-400 text-6xl mb-4">🔍</div>
-                  <h3 className="text-xl font-semibold text-gray-600 mb-2">
-                    No tasks found
-                  </h3>
-                  <p className="text-gray-500">
-                    Try adjusting your search or filter criteria
-                  </p>
+                  ))}
                 </div>
               )}
             </div>

@@ -141,7 +141,7 @@ export default function NotificationsPage() {
       <main className="relative z-10 pt-24 px-4 max-w-4xl mx-auto pb-8">
         {/* Header */}
         <div className="mb-8">
-          <Link href="/dashboard">
+          <Link href="/marketplace">
             <div className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-4 transition-colors cursor-pointer">
               <FaArrowLeft />
               <span>Back to Dashboard</span>

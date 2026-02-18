@@ -7,38 +7,29 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setLoading(true);
 
     try {
-      const res = await fetch("/api/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        // Store the token in localStorage or context/state management
-        localStorage.setItem("token", data.token);
-        router.push("/dashboard"); // Redirect to the dashboard or home page
-      } else {
-        const data = await res.json();
-        setError(data.message);
-      }
-    } catch (error) {
-      console.error("Error:", error);
-      setError("An unexpected error occurred");
+      await login(username, password);
+      router.push("/marketplace"); // Redirect to the marketplace
+    } catch (error: any) {
+      console.error("Login error:", error);
+      setError(error.message || "An unexpected error occurred");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -103,12 +94,13 @@ export default function LoginPage() {
               <div className="bg-gray-900 w-full max-w-md p-4 flex items-center rounded-md shadow-md">
                 <FaRegEnvelope className="text-gray-400 mr-3" />
                 <input
-                  type="email"
-                  name="email"
-                  placeholder="Username/Email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  type="text"
+                  name="username"
+                  placeholder="Username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   className="bg-gray-900 text-white outline-none flex-1"
+                  required
                 />
               </div>
               <div className="bg-gray-900 w-full max-w-md p-4 flex items-center rounded-md shadow-md">
@@ -125,10 +117,11 @@ export default function LoginPage() {
               {error && <p className="text-red-500">{error}</p>}
               <Button
                 type="submit"
-                className="w-full max-w-md text-white font-bold py-4 px-8 rounded-md transition duration-300 ease-in-out transform hover:scale-105 hover:opacity-90"
+                disabled={loading}
+                className="w-full max-w-md text-white font-bold py-4 px-8 rounded-md transition duration-300 ease-in-out transform hover:scale-105 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ backgroundColor: "rgb(9, 13, 33)" }}
               >
-                Login
+                {loading ? "Signing in..." : "Login"}
               </Button>
             </form>
             <div className="mt-6 text-center">

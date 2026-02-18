@@ -1,19 +1,18 @@
 // src/lib/user.ts
 
-export async function createUser(name: string, email: string, password: string) {
-    const response = await fetch('http://localhost:5000/api/flask/users', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ name, email, password }),
+import { authApi } from './api';
+
+export async function createUser(email: string, username: string, password: string, displayName: string) {
+  try {
+    const response = await authApi.register({
+      email,
+      username,
+      password,
+      displayName
     });
-  
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to create user');
-    }
-  
-    return await response.json();
+    return response;
+  } catch (error: any) {
+    throw new Error(error.message || 'Failed to create user');
   }
+}
   

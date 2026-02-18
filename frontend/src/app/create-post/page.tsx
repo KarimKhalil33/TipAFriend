@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
+import { postsApi } from "@/lib/api";
 import {
   FaArrowLeft,
   FaMapMarkerAlt,
@@ -32,6 +33,7 @@ export default function CreatePostPage() {
     currency: "USD",
   });
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const categories = [
     "Moving",
@@ -61,18 +63,49 @@ export default function CreatePostPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setLoading(true);
 
     // Basic validation
     if (!formData.title || !formData.description || !formData.category) {
       setError("Please fill in all required fields");
+      setLoading(false);
       return;
     }
 
-    // In real app, this would be an API call
-    console.log("Creating post:", { postType, ...formData });
+    try {
+      // Convert form data to API format
+      const scheduledTime =
+        formData.scheduledDate && formData.scheduledTime
+          ? `${formData.scheduledDate}T${formData.scheduledTime}:00`
+          : undefined;
 
-    // Simulate success and redirect back to dashboard
-    router.push("/dashboard");
+      const postData = {
+        type: postType.toUpperCase() as "REQUEST" | "OFFER",
+        title: formData.title,
+        description: formData.description,
+        category: formData.category.toUpperCase(),
+        locationName:
+          `${formData.address}, ${formData.city}, ${formData.province}, ${formData.country}`.trim(),
+        scheduledTime,
+        durationMinutes: formData.duration
+          ? parseInt(formData.duration)
+          : undefined,
+        paymentType: "FIXED" as const,
+        price: formData.price ? parseFloat(formData.price) : undefined,
+      };
+
+      console.log("Creating post:", postData);
+
+      await postsApi.createPost(postData);
+
+      // Redirect to marketplace on success
+      router.push("/marketplace");
+    } catch (error: any) {
+      console.error("Error creating post:", error);
+      setError(error.message || "Failed to create post");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -395,13 +428,16 @@ export default function CreatePostPage() {
             </Button>
             <Button
               type="submit"
+              disabled={loading}
               className={`flex-1 py-3 px-6 rounded-lg font-semibold text-white transition duration-300 ${
                 postType === "request"
-                  ? "bg-blue-600 hover:bg-blue-700"
-                  : "bg-green-600 hover:bg-green-700"
+                  ? "bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400"
+                  : "bg-green-600 hover:bg-green-700 disabled:bg-green-400"
               }`}
             >
-              Create {postType === "request" ? "Request" : "Offer"}
+              {loading
+                ? "Creating..."
+                : `Create ${postType === "request" ? "Request" : "Offer"}`}
             </Button>
           </div>
         </form>
