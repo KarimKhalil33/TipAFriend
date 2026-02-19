@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import { postsApi } from "@/lib/api";
@@ -16,6 +16,9 @@ import {
 
 export default function CreatePostPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editId = Number(searchParams.get("editId") || "0");
+  const isEditMode = !!editId;
   const [postType, setPostType] = useState("request"); // "request" or "offer"
   const [formData, setFormData] = useState({
     title: "",
@@ -34,22 +37,66 @@ export default function CreatePostPage() {
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [prefilling, setPrefilling] = useState(false);
 
   const categories = [
-    "Moving",
-    "Pet Care",
-    "Shopping",
-    "Cleaning",
-    "Cooking",
-    "Transportation",
-    "Gardening",
-    "Tech Help",
-    "Tutoring",
-    "Other",
+    { label: "Moving", value: "MOVING" },
+    { label: "Pet Care", value: "PET_CARE" },
+    { label: "Errands", value: "ERRANDS" },
+    { label: "Cleaning", value: "CLEANING" },
+    { label: "Tutoring", value: "TUTORING" },
+    { label: "Tech Help", value: "TECH_HELP" },
+    { label: "Other", value: "OTHER" },
   ];
 
   const timezones = ["EST", "CST", "MST", "PST", "GMT", "CET"];
   const currencies = ["USD", "CAD", "EUR", "GBP"];
+
+  useEffect(() => {
+    const loadPostForEdit = async () => {
+      if (!isEditMode) return;
+
+      try {
+        setPrefilling(true);
+        const post = await postsApi.getPost(editId);
+
+        const locationParts = (post.locationName || "")
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+
+        const scheduled = post.scheduledTime
+          ? new Date(post.scheduledTime)
+          : null;
+
+        setPostType(post.type === "REQUEST" ? "request" : "offer");
+        setFormData((prev) => ({
+          ...prev,
+          title: post.title || "",
+          description: post.description || "",
+          category: post.category || "",
+          address: locationParts[0] || "",
+          city: locationParts[1] || "",
+          province: locationParts[2] || "",
+          country: locationParts[3] || "",
+          scheduledDate: scheduled ? scheduled.toISOString().slice(0, 10) : "",
+          scheduledTime: scheduled
+            ? `${String(scheduled.getHours()).padStart(2, "0")}:${String(
+                scheduled.getMinutes(),
+              ).padStart(2, "0")}`
+            : "",
+          duration: post.durationMinutes ? String(post.durationMinutes) : "",
+          price: post.price ? String(post.price) : "",
+        }));
+      } catch (err: any) {
+        setError(err.message || "Failed to load post for editing");
+      } finally {
+        setPrefilling(false);
+      }
+    };
+
+    loadPostForEdit();
+  }, [isEditMode, editId]);
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -79,13 +126,29 @@ export default function CreatePostPage() {
           ? `${formData.scheduledDate}T${formData.scheduledTime}:00`
           : undefined;
 
+      const locationParts = [
+        formData.address?.trim(),
+        formData.city?.trim(),
+        formData.province?.trim(),
+        formData.country?.trim(),
+      ].filter(Boolean);
+
+      const locationName =
+        locationParts.length > 0 ? locationParts.join(", ") : undefined;
+
       const postData = {
         type: postType.toUpperCase() as "REQUEST" | "OFFER",
         title: formData.title,
         description: formData.description,
-        category: formData.category.toUpperCase(),
-        locationName:
-          `${formData.address}, ${formData.city}, ${formData.province}, ${formData.country}`.trim(),
+        category: formData.category as
+          | "CLEANING"
+          | "MOVING"
+          | "PET_CARE"
+          | "ERRANDS"
+          | "TUTORING"
+          | "TECH_HELP"
+          | "OTHER",
+        locationName,
         scheduledTime,
         durationMinutes: formData.duration
           ? parseInt(formData.duration)
@@ -96,7 +159,11 @@ export default function CreatePostPage() {
 
       console.log("Creating post:", postData);
 
-      await postsApi.createPost(postData);
+      if (isEditMode) {
+        await postsApi.updatePost(editId, postData);
+      } else {
+        await postsApi.createPost(postData);
+      }
 
       // Redirect to marketplace on success
       router.push("/marketplace");
@@ -139,12 +206,20 @@ export default function CreatePostPage() {
             <span>Back to Dashboard</span>
           </button>
           <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            Create New Post
+            {isEditMode ? "Edit Post" : "Create New Post"}
           </h1>
           <p className="text-gray-600">
-            Share what you need help with or what you can offer
+            {isEditMode
+              ? "Update your post details"
+              : "Share what you need help with or what you can offer"}
           </p>
         </div>
+
+        {prefilling && (
+          <div className="mb-4 text-sm text-gray-600">
+            Loading post details...
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Post Type Selection */}
@@ -233,8 +308,8 @@ export default function CreatePostPage() {
                 >
                   <option value="">Select a category</option>
                   {categories.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
+                    <option key={cat.value} value={cat.value}>
+                      {cat.label}
                     </option>
                   ))}
                 </select>
@@ -436,8 +511,12 @@ export default function CreatePostPage() {
               }`}
             >
               {loading
-                ? "Creating..."
-                : `Create ${postType === "request" ? "Request" : "Offer"}`}
+                ? isEditMode
+                  ? "Updating..."
+                  : "Creating..."
+                : isEditMode
+                  ? "Update Post"
+                  : `Create ${postType === "request" ? "Request" : "Offer"}`}
             </Button>
           </div>
         </form>

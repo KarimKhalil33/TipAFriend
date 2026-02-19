@@ -12,6 +12,7 @@ import {
   usersApi,
   User,
   FriendRequest,
+  tasksApi,
 } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import {
@@ -53,6 +54,12 @@ export default function ProfilePage() {
   const [friends, setFriends] = useState<number[]>([]);
   const [friendUsers, setFriendUsers] = useState<User[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [profileUser, setProfileUser] = useState<User | null>(null);
+  const [stats, setStats] = useState({
+    postsCreated: 0,
+    tasksAccepted: 0,
+    friends: 0,
+  });
 
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
@@ -81,8 +88,6 @@ export default function ProfilePage() {
       try {
         setSearchLoading(true);
         const results = await usersApi.searchUsers(query);
-        console.log("Search results received:", results);
-        console.log("First result structure:", results[0]);
         setSearchResults(results.filter((u) => u.id !== user?.id)); // Exclude self
       } catch (error: any) {
         console.error("Error searching users:", error);
@@ -101,11 +106,55 @@ export default function ProfilePage() {
     }
   }, [isAuthenticated, router]);
 
+  useEffect(() => {
+    const loadMe = async () => {
+      try {
+        const me = await usersApi.getMe();
+        setProfileUser(me);
+      } catch {
+        setProfileUser(user || null);
+      }
+    };
+
+    if (isAuthenticated) {
+      loadMe();
+    }
+  }, [isAuthenticated, user]);
+
+  useEffect(() => {
+    const preloadStats = async () => {
+      if (!isAuthenticated) return;
+      try {
+        const [myPostsData, acceptedData, friendsData] = await Promise.all([
+          postsApi.getUserPosts().catch(() => [] as Post[]),
+          postsApi.getAcceptedPosts().catch(() => [] as Post[]),
+          friendsApi.getFriends().catch(() => [] as number[]),
+        ]);
+
+        setStats({
+          postsCreated: myPostsData.length,
+          tasksAccepted: acceptedData.length,
+          friends: friendsData.length,
+        });
+
+        // Keep existing tab behavior, but avoid showing zeros on entry
+        setMyPosts((prev) => (prev.length ? prev : myPostsData));
+        setAcceptedPosts((prev) => (prev.length ? prev : acceptedData));
+        setFriends((prev) => (prev.length ? prev : friendsData));
+      } catch {
+        // ignore preload failure; individual tab loads still work
+      }
+    };
+
+    preloadStats();
+  }, [isAuthenticated]);
+
   const loadMyPosts = useCallback(async () => {
     try {
       setLoading(true);
       const posts = await postsApi.getUserPosts();
       setMyPosts(posts);
+      setStats((prev) => ({ ...prev, postsCreated: posts.length }));
       setError("");
     } catch (error: any) {
       console.error("Error loading my posts:", error);
@@ -120,6 +169,7 @@ export default function ProfilePage() {
       setLoading(true);
       const posts = await postsApi.getAcceptedPosts();
       setAcceptedPosts(posts);
+      setStats((prev) => ({ ...prev, tasksAccepted: posts.length }));
       setError("");
     } catch (error: any) {
       console.error("Error loading accepted posts:", error);
@@ -153,6 +203,7 @@ export default function ProfilePage() {
       }
       setFriendUsers(friendsList);
       setFriends(friendIds);
+      setStats((prev) => ({ ...prev, friends: friendIds.length }));
       const [incomingData, outgoingData] = await Promise.all([
         friendsApi.getIncomingRequests(),
         friendsApi.getOutgoingRequests(),
@@ -170,12 +221,6 @@ export default function ProfilePage() {
 
   const sendFriendRequest = async (userId: number) => {
     try {
-      console.log(
-        "Sending friend request to userId:",
-        userId,
-        "type:",
-        typeof userId,
-      );
       await friendsApi.sendFriendRequest(userId);
       loadFriends(); // Refresh data
     } catch (error: any) {
@@ -200,6 +245,85 @@ export default function ProfilePage() {
     } catch (error: any) {
       console.error("Error declining friend request:", error);
     }
+  };
+
+  const removeFriend = async (friendId: number) => {
+    try {
+      await friendsApi.removeFriend(friendId);
+      await loadFriends();
+    } catch (error: any) {
+      setError(error.message || "Failed to remove friend");
+    }
+  };
+
+  const viewPostDetails = async (postId: number) => {
+    router.push(`/posts/${postId}`);
+  };
+
+  const editPostQuick = async (post: Post) => {
+    router.push(`/create-post?editId=${post.id}`);
+  };
+
+  const updateTaskStatus = async (
+    post: Post,
+    status: "in-progress" | "complete",
+  ) => {
+    const candidates = [
+      (post as any).taskAssignmentId,
+      (post as any).taskId,
+      post.id,
+    ].filter((id) => !!id && !Number.isNaN(Number(id)));
+
+    if (candidates.length === 0) {
+      setError("Task ID is missing for this accepted post.");
+      return;
+    }
+
+    let lastError: any = null;
+    for (const candidate of candidates) {
+      try {
+        if (status === "in-progress") {
+          await tasksApi.markInProgress(Number(candidate));
+        } else {
+          await tasksApi.markComplete(Number(candidate));
+        }
+        await loadAcceptedPosts();
+        setError("");
+        return;
+      } catch (error: any) {
+        lastError = error;
+      }
+    }
+
+    setError(lastError?.message || "Failed to update task status");
+  };
+
+  const createPayment = async (post: Post) => {
+    const payeeId = Number((post as any).accepterId || 0);
+    if (!payeeId) {
+      setError(
+        "Cannot create payment yet: no helper is attached to this task.",
+      );
+      return;
+    }
+
+    const taskAssignmentId = String((post as any).taskAssignmentId || "");
+    const query = new URLSearchParams({
+      postId: String(post.id),
+      payeeId: String(payeeId),
+      amount: String(post.price || ""),
+      taskAssignmentId,
+    }).toString();
+    router.push(`/payments?${query}`);
+  };
+
+  const createReview = async (post: Post) => {
+    const taskAssignmentId = String((post as any).taskAssignmentId || "");
+    const query = new URLSearchParams({
+      taskAssignmentId,
+      postId: String(post.id),
+    }).toString();
+    router.push(`/reviews?${query}`);
   };
 
   useEffect(() => {
@@ -230,7 +354,13 @@ export default function ProfilePage() {
   }
 
   const currentPosts = activeTab === "my-posts" ? myPosts : acceptedPosts;
-  console.log("friendUsers:", friendUsers);
+  const canMarkInProgress = (post: Post) =>
+    ["ACCEPTED", "OPEN"].includes(post.status);
+  const canMarkComplete = (post: Post) =>
+    ["ACCEPTED", "IN_PROGRESS"].includes(post.status);
+  const canPay = (post: Post) => post.status === "COMPLETED" && !!post.price;
+  const canReview = (post: Post) => post.status === "COMPLETED";
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white text-gray-900">
       {/* Background Wave Pattern */}
@@ -267,14 +397,16 @@ export default function ProfilePage() {
           <div className="text-center mb-12">
             <div className="w-24 h-24 mx-auto mb-6 rounded-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
               <span className="text-white font-bold text-2xl">
-                {user?.displayName?.charAt(0).toUpperCase() || "U"}
+                {(profileUser?.displayName || user?.displayName)
+                  ?.charAt(0)
+                  .toUpperCase() || "U"}
               </span>
             </div>
             <h1 className="text-4xl font-bold mb-2 text-gray-800">
-              {user?.displayName || "User"}
+              {profileUser?.displayName || user?.displayName || "User"}
             </h1>
             <p className="text-xl text-gray-600">
-              @{user?.username || "username"}
+              @{profileUser?.username || user?.username || "username"}
             </p>
             <p className="text-lg text-gray-500 mt-2">
               Your Profile & Activity
@@ -322,19 +454,19 @@ export default function ProfilePage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <div className="bg-white rounded-2xl shadow-xl p-6 text-center">
               <div className="text-3xl font-bold text-blue-600 mb-2">
-                {myPosts.length}
+                {stats.postsCreated}
               </div>
               <div className="text-gray-600">Posts Created</div>
             </div>
             <div className="bg-white rounded-2xl shadow-xl p-6 text-center">
               <div className="text-3xl font-bold text-green-600 mb-2">
-                {acceptedPosts.length}
+                {stats.tasksAccepted}
               </div>
               <div className="text-gray-600">Tasks Accepted</div>
             </div>
             <div className="bg-white rounded-2xl shadow-xl p-6 text-center">
               <div className="text-3xl font-bold text-purple-600 mb-2">
-                {friends.length}
+                {stats.friends}
               </div>
               <div className="text-gray-600">Friends</div>
             </div>
@@ -552,22 +684,33 @@ export default function ProfilePage() {
                         {friendUsers.map((friend) => (
                           <div
                             key={friend.id}
-                            className="flex items-center gap-4 p-4 border rounded-lg bg-white shadow-sm"
+                            className="flex items-center justify-between gap-4 p-4 border rounded-lg bg-white shadow-sm"
                           >
-                            <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center">
-                              <span className="text-white font-bold text-lg">
-                                {friend.displayName?.charAt(0).toUpperCase() ||
-                                  "?"}
-                              </span>
-                            </div>
-                            <div>
-                              <div className="font-medium text-gray-900">
-                                {friend.displayName || "Unknown User"}
+                            <div className="flex items-center gap-4">
+                              <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center">
+                                <span className="text-white font-bold text-lg">
+                                  {friend.displayName
+                                    ?.charAt(0)
+                                    .toUpperCase() || "?"}
+                                </span>
                               </div>
-                              <div className="text-sm text-gray-500">
-                                @{friend.username || "unknown"}
+                              <div>
+                                <div className="font-medium text-gray-900">
+                                  {friend.displayName || "Unknown User"}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  @{friend.username || "unknown"}
+                                </div>
                               </div>
                             </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-red-600 border-red-200 hover:bg-red-50"
+                              onClick={() => removeFriend(friend.id)}
+                            >
+                              Remove
+                            </Button>
                           </div>
                         ))}
                       </div>
@@ -633,7 +776,7 @@ export default function ProfilePage() {
                     Try Again
                   </Button>
                 </div>
-              ) : activeTab !== "friends" && currentPosts.length === 0 ? (
+              ) : currentPosts.length === 0 ? (
                 <div className="text-center py-20">
                   <div className="text-gray-400 text-6xl mb-4">
                     {activeTab === "my-posts" ? "📝" : "🤝"}
@@ -735,14 +878,11 @@ export default function ProfilePage() {
 
                       {/* Actions */}
                       <div className="mt-4 pt-4 border-t border-gray-100">
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => {
-                              // TODO: Navigate to post details or edit
-                              console.log("View post:", post.id);
-                            }}
+                            onClick={() => viewPostDetails(post.id)}
                           >
                             View Details
                           </Button>
@@ -750,15 +890,72 @@ export default function ProfilePage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => {
-                                // TODO: Navigate to edit post
-                                console.log("Edit post:", post.id);
-                              }}
+                              onClick={() => editPostQuick(post)}
                             >
                               Edit
                             </Button>
                           )}
+                          {activeTab === "accepted" && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                  updateTaskStatus(post, "in-progress")
+                                }
+                                disabled={!canMarkInProgress(post)}
+                              >
+                                In Progress
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                  updateTaskStatus(post, "complete")
+                                }
+                                disabled={!canMarkComplete(post)}
+                              >
+                                Complete
+                              </Button>
+                            </>
+                          )}
+                          {activeTab === "my-posts" && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                  router.push(
+                                    `/notifications?postId=${post.id}`,
+                                  )
+                                }
+                              >
+                                Interactions
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => createPayment(post)}
+                                disabled={!canPay(post)}
+                              >
+                                Pay
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => createReview(post)}
+                                disabled={!canReview(post)}
+                              >
+                                Review
+                              </Button>
+                            </>
+                          )}
                         </div>
+                        {activeTab === "my-posts" && !canPay(post) && (
+                          <p className="text-xs text-gray-500 mt-2">
+                            Payment unlocks once the task is fully completed.
+                          </p>
+                        )}
                       </div>
                     </div>
                   ))}

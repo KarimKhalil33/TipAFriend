@@ -1,12 +1,42 @@
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { FaBell, FaUser, FaSignOutAlt } from "react-icons/fa";
 import { useAuth } from "@/contexts/AuthContext";
+import { notificationsApi } from "@/lib/api";
 
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, isAuthenticated, logout } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const loadUnread = async () => {
+      if (!isAuthenticated) {
+        setUnreadCount(0);
+        return;
+      }
+
+      try {
+        const raw = await notificationsApi.getNotifications();
+        const list = Array.isArray(raw)
+          ? raw
+          : Array.isArray((raw as any)?.content)
+            ? (raw as any).content
+            : [];
+
+        const unread = list.filter(
+          (n: any) => !(n.read ?? n.isRead ?? false),
+        ).length;
+        setUnreadCount(unread);
+      } catch {
+        setUnreadCount(0);
+      }
+    };
+
+    loadUnread();
+  }, [isAuthenticated, pathname]);
 
   const handleLogout = () => {
     logout();
@@ -34,9 +64,11 @@ export default function Navbar() {
                   }`}
                 />
                 {/* Notification Badge */}
-                <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
-                  3
-                </div>
+                {unreadCount > 0 && (
+                  <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 min-w-5 px-1 flex items-center justify-center font-bold">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </div>
+                )}
               </div>
             </Link>
 
@@ -75,7 +107,6 @@ export default function Navbar() {
                   Profile
                 </span>
               </Link>
-
               {/* User Menu */}
               <div className="flex items-center gap-3 ml-4">
                 <div className="flex items-center gap-2 text-gray-700">

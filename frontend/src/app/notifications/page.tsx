@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import {
   FaArrowLeft,
@@ -16,46 +17,121 @@ import { notificationsApi } from "@/lib/api";
 import type { Notification } from "@/lib/api";
 
 export default function NotificationsPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const postIdFilter = Number(searchParams.get("postId") || "0");
   const [filter, setFilter] = useState("all"); // "all", "unread"
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const loadNotifications = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const rawData = await notificationsApi.getNotifications();
+
+      const list = Array.isArray(rawData)
+        ? rawData
+        : Array.isArray((rawData as any)?.content)
+          ? (rawData as any).content
+          : [];
+
+      const normalized = list.map((n: any) => ({
+        ...n,
+        read: n.read ?? n.isRead ?? false,
+        message: n.message || n.title || "Notification",
+      }));
+
+      const filteredByPost = postIdFilter
+        ? normalized.filter(
+            (n: any) =>
+              Number(n.postId || 0) === postIdFilter ||
+              String(n.message || "").includes(`#${postIdFilter}`),
+          )
+        : normalized;
+
+      setNotifications(filteredByPost);
+    } catch (err: any) {
+      setError(err.message || "Failed to load notifications");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchNotifications = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await notificationsApi.getNotifications();
-        setNotifications(data);
-      } catch (err: any) {
-        setError(err.message || "Failed to load notifications");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchNotifications();
-  }, []);
+    loadNotifications();
+  }, [postIdFilter]);
 
   const getNotificationIcon = (type: string) => {
-    switch (type) {
+    switch (type?.toLowerCase()) {
       case "friend_request":
+      case "friend_request_received":
         return <FaUserPlus className="text-blue-500" />;
       case "post_liked":
         return <FaHeart className="text-red-500" />;
       case "new_post":
+      case "post_created":
         return <FaExclamationCircle className="text-green-500" />;
       case "message":
+      case "new_message":
         return <FaComment className="text-purple-500" />;
       case "post_accepted":
+      case "task_accepted":
         return <FaCheck className="text-green-600" />;
       case "payment_received":
+      case "payment_succeeded":
         return <FaDollarSign className="text-green-500" />;
       case "task_completed":
+      case "task_in_progress":
         return <FaCheck className="text-blue-500" />;
       default:
         return <FaExclamationCircle className="text-gray-500" />;
     }
+  };
+
+  const getActionUrl = (notification: Notification): string => {
+    const type = notification.type?.toLowerCase() || "";
+
+    if (notification.conversationId || type.includes("message")) {
+      return notification.conversationId
+        ? `/messages?conversationId=${notification.conversationId}`
+        : notification.actorUserId
+          ? `/messages?userId=${notification.actorUserId}`
+          : "/messages";
+    }
+
+    if (type.includes("friend")) {
+      return "/profile";
+    }
+
+    if (notification.postId) {
+      return `/posts/${notification.postId}`;
+    }
+
+    if (type.includes("payment")) {
+      return "/payments";
+    }
+
+    if (notification.taskAssignmentId && type.includes("task_completed")) {
+      return `/reviews?taskAssignmentId=${notification.taskAssignmentId}`;
+    }
+
+    return notification.postId
+      ? `/notifications?postId=${notification.postId}`
+      : "/notifications";
+  };
+
+  const getInitials = (notification: Notification) => {
+    const source =
+      notification.user?.displayName || notification.user?.username || "U";
+    return source.charAt(0).toUpperCase();
+  };
+
+  const formatTime = (createdAt: string) => {
+    const date = new Date(createdAt);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toLocaleString();
   };
 
   const filteredNotifications = notifications.filter(
@@ -70,6 +146,16 @@ export default function NotificationsPage() {
       );
     } catch (err) {
       // Optionally show error
+    }
+  };
+
+  const handleNotificationClick = async (notification: Notification) => {
+    if (!notification.read) {
+      await markAsRead(notification.id);
+    }
+    const url = getActionUrl(notification);
+    if (url !== "/notifications") {
+      router.push(url);
     }
   };
 
@@ -146,6 +232,12 @@ export default function NotificationsPage() {
             >
               Mark all as read
             </button>
+            <button
+              onClick={loadNotifications}
+              className="ml-3 text-gray-600 hover:text-gray-800 font-medium transition-colors"
+            >
+              Refresh
+            </button>
           </div>
         </div>
 
@@ -179,12 +271,12 @@ export default function NotificationsPage() {
         <div className="space-y-3">
           {filteredNotifications.length > 0 ? (
             filteredNotifications.map((notification) => (
-              <div
+              <button
                 key={notification.id}
                 className={`bg-white rounded-2xl shadow-sm p-4 hover:shadow-md transition-all cursor-pointer ${
                   !notification.read ? "border-l-4 border-blue-500" : ""
                 }`}
-                onClick={() => markAsRead(notification.id)}
+                onClick={() => handleNotificationClick(notification)}
               >
                 <div className="flex items-start gap-4">
                   {/* Avatar */}
@@ -192,17 +284,24 @@ export default function NotificationsPage() {
                     className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-white flex-shrink-0"
                     style={{ backgroundColor: "rgb(9, 13, 33)" }}
                   >
-                    {notification.avatar}
+                    {getInitials(notification)}
                   </div>
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-3">
-                      <p
-                        className={`text-gray-800 ${!notification.read ? "font-medium" : ""}`}
-                      >
-                        {notification.message}
-                      </p>
+                      <div className="flex-1">
+                        {notification.title ? (
+                          <h3 className="text-sm font-semibold text-gray-900 mb-0.5">
+                            {notification.title}
+                          </h3>
+                        ) : null}
+                        <p
+                          className={`text-gray-800 ${!notification.read ? "font-medium" : ""}`}
+                        >
+                          {notification.message}
+                        </p>
+                      </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {getNotificationIcon(notification.type)}
                         {!notification.read && (
@@ -211,11 +310,11 @@ export default function NotificationsPage() {
                       </div>
                     </div>
                     <p className="text-sm text-gray-500 mt-1">
-                      {notification.time}
+                      {formatTime(notification.createdAt)}
                     </p>
                   </div>
                 </div>
-              </div>
+              </button>
             ))
           ) : (
             <div className="text-center py-12">
@@ -233,15 +332,6 @@ export default function NotificationsPage() {
             </div>
           )}
         </div>
-
-        {/* Load More (for future pagination) */}
-        {filteredNotifications.length > 0 && (
-          <div className="text-center py-8">
-            <button className="bg-gray-100 text-gray-700 hover:bg-gray-200 px-8 py-3 rounded-lg transition-colors">
-              Load More Notifications
-            </button>
-          </div>
-        )}
       </main>
     </div>
   );

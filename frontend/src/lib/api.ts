@@ -68,6 +68,9 @@ export interface RegisterRequest {
 export interface Post {
   id: number;
   author: User;
+  authorId?: number;
+  taskAssignmentId?: number;
+  accepterId?: number;
   type: 'REQUEST' | 'OFFER';
   title: string;
   description?: string;
@@ -123,6 +126,7 @@ export interface Payment {
   amount: number;
   status: string;
   stripePaymentIntentId?: string;
+  stripeClientSecret?: string;
   createdAt: string;
 }
 
@@ -159,13 +163,19 @@ export interface Notification {
   title: string;
   message: string;
   read: boolean;
+  isRead?: boolean;
   createdAt: string;
+  postId?: number;
+  conversationId?: number;
+  taskAssignmentId?: number;
+  paymentId?: number;
+  actorUserId?: number;
 }
 
 // Auth API
 export const authApi = {
   register: async (data: RegisterRequest): Promise<AuthResponse> => {
-    const response = await fetch(`${API_BASE_URL}/signup`, {
+    const response = await fetch(`${API_BASE_URL}/auth/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -237,20 +247,18 @@ export const usersApi = {
 
 // Friends API
 export const friendsApi = {
-      getFriendsList: async (): Promise<User[]> => {
+  getFriendsList: async (): Promise<User[]> => {
     const token = getAuthToken();
     if (!token) throw new Error('No authentication token');
-    console.log("API:");
+
     const response = await fetch(`${API_BASE_URL}/friends/list`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     });
-    console.log("apiiiii:", response);
 
     if (!response.ok) {
-        console.log("apiiiii:", response);
       throw new Error('Failed to get friends list');
     }
 
@@ -402,7 +410,12 @@ export const postsApi = {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to create post');
+      const errorData = await response.json().catch(() => null);
+      const message =
+        errorData?.message ||
+        errorData?.error ||
+        `Failed to create post (HTTP ${response.status})`;
+      throw new Error(message);
     }
 
     return response.json();

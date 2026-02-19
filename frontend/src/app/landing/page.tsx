@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
+import { healthApi } from "@/lib/api";
 import {
   FaShieldAlt,
   FaBolt,
@@ -13,6 +15,28 @@ import {
 } from "react-icons/fa";
 
 export default function LandingPage() {
+  const [apiHealthy, setApiHealthy] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const checkHealth = async () => {
+      try {
+        const response = await healthApi.check();
+        if (mounted) {
+          setApiHealthy(response?.status?.toLowerCase() === "ok");
+        }
+      } catch {
+        if (mounted) setApiHealthy(false);
+      }
+    };
+
+    checkHealth();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white text-gray-900">
       {/* Subtle Wave Background */}
@@ -97,6 +121,24 @@ export default function LandingPage() {
               className="lg:col-span-2 animate-fade-in-down rounded-3xl shadow-2xl p-12 transform hover:scale-105 transition-transform duration-500"
               style={{ backgroundColor: "rgb(9, 13, 33)" }}
             >
+              <div className="mb-4 flex justify-center lg:justify-start">
+                <span
+                  className={`text-xs px-3 py-1 rounded-full border ${
+                    apiHealthy === null
+                      ? "text-gray-300 border-gray-500"
+                      : apiHealthy
+                        ? "text-green-300 border-green-400"
+                        : "text-red-300 border-red-400"
+                  }`}
+                >
+                  API{" "}
+                  {apiHealthy === null
+                    ? "Checking..."
+                    : apiHealthy
+                      ? "Online"
+                      : "Offline"}
+                </span>
+              </div>
               <h2 className="text-4xl font-bold mb-3 text-white">Welcome to</h2>
               <h1 className="text-5xl font-extrabold mb-6 text-white">
                 Tip <span className="text-white"> A </span> Friend

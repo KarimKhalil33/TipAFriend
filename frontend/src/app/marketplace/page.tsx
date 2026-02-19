@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/contexts/AuthContext";
-import { postsApi, usersApi, Post, User } from "@/lib/api";
+import { postsApi, usersApi, Post, User, tasksApi } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import {
   FaSearch,
@@ -34,14 +34,18 @@ export default function MarketplacePage() {
     "all",
   );
   const [searchTerm, setSearchTerm] = useState("");
+  const [includeMyPosts, setIncludeMyPosts] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
   const [authorMap, setAuthorMap] = useState<Record<number, User>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [actionLoadingPostId, setActionLoadingPostId] = useState<number | null>(
+    null,
+  );
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
 
-  const { user, isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -69,17 +73,25 @@ export default function MarketplacePage() {
       }
 
       const response = await postsApi.getFeed(params);
-      setPosts(response.content);
+      let nextPosts = response.content;
+
+      if (includeMyPosts) {
+        const myPosts = await postsApi.getUserPosts().catch(() => [] as Post[]);
+        const merged = [...myPosts, ...response.content];
+        nextPosts = Array.from(new Map(merged.map((p) => [p.id, p])).values());
+      }
+
+      setPosts(nextPosts);
       setTotalPages(response.totalPages);
       setError("");
 
       // Collect missing author IDs
-      const missingAuthorIds = response.content
+      const missingAuthorIds = nextPosts
         .filter(
           (post: Post) =>
             !post.author || !post.author.displayName || !post.author.username,
         )
-        .map((post: Post) => post.author?.id)
+        .map((post: Post) => post.author?.id || (post as any).authorId)
         .filter((id: number | undefined): id is number => !!id);
 
       // Remove duplicates
@@ -101,7 +113,7 @@ export default function MarketplacePage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedType, selectedCategory, page]);
+  }, [selectedType, selectedCategory, page, includeMyPosts]);
 
   useEffect(() => {
     loadFeed();
@@ -138,6 +150,18 @@ export default function MarketplacePage() {
     return null;
   }
 
+  const acceptPost = async (postId: number) => {
+    try {
+      setActionLoadingPostId(postId);
+      await tasksApi.acceptPost(postId);
+      router.push("/profile");
+    } catch (error: any) {
+      setError(error.message || "Failed to accept post");
+    } finally {
+      setActionLoadingPostId(null);
+    }
+  };
+
   const filteredPosts = posts
     .filter(
       (post) =>
@@ -149,12 +173,13 @@ export default function MarketplacePage() {
       // Patch author if missing
       if (
         (!post.author?.displayName || !post.author?.username) &&
-        post.author?.id &&
-        authorMap[post.author.id]
+        (post.author?.id || (post as any).authorId) &&
+        authorMap[post.author?.id || (post as any).authorId]
       ) {
+        const authorId = post.author?.id || (post as any).authorId;
         return {
           ...post,
-          author: authorMap[post.author.id],
+          author: authorMap[authorId],
         };
       }
       return post;
@@ -254,6 +279,10 @@ export default function MarketplacePage() {
               Browse tasks from your friends network - find help or offer your
               services
             </p>
+            <p className="text-sm text-gray-500 mt-2">
+              Feed is friends-only by default. Toggle "Include My Posts" to view
+              your own posts here too.
+            </p>
           </div>
 
           {/* Search and Filter Bar */}
@@ -270,6 +299,16 @@ export default function MarketplacePage() {
                 />
               </div>
               <div className="flex gap-2">
+                <Button
+                  onClick={() => setIncludeMyPosts((prev) => !prev)}
+                  className={`${
+                    includeMyPosts
+                      ? "bg-indigo-600 hover:bg-indigo-700"
+                      : "bg-gray-500 hover:bg-gray-600"
+                  } text-white px-6 py-3`}
+                >
+                  {includeMyPosts ? "Showing My Posts" : "Include My Posts"}
+                </Button>
                 <Button className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3">
                   <FaFilter className="mr-2" />
                   Filters
@@ -391,164 +430,209 @@ export default function MarketplacePage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {filteredPosts.map((post) => (
-                    <div
-                      key={post.id}
-                      className="bg-white rounded-2xl shadow-xl hover:scale-105 transition-all duration-300 relative overflow-hidden"
-                    >
-                      {/* Type Badge */}
-                      <div className="absolute top-4 right-4 z-10">
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                            post.type === "REQUEST"
-                              ? "bg-blue-500 text-white"
-                              : "bg-green-500 text-white"
-                          }`}
-                        >
-                          {post.type === "REQUEST" ? "Request" : "Offer"}
-                        </span>
-                      </div>
+                  {filteredPosts.map((post) => {
+                    const authorId = post.author?.id || (post as any).authorId;
+                    const isOwnPost = !!user?.id && authorId === user.id;
 
-                      {/* Blue Header Section */}
+                    return (
                       <div
-                        className="p-6 pb-4"
-                        style={{ backgroundColor: "rgb(9, 13, 33)" }}
+                        key={post.id}
+                        className="bg-white rounded-2xl shadow-xl hover:scale-105 transition-all duration-300 relative overflow-hidden"
                       >
-                        <div className="flex justify-between items-start pr-20">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
-                              <span className="text-white font-bold text-sm">
-                                {post.author && post.author.displayName ? (
-                                  post.author.displayName
-                                    .charAt(0)
-                                    .toUpperCase()
-                                ) : (
-                                  <FaUser className="text-white" />
-                                )}
-                              </span>
-                            </div>
-                            <div>
-                              <h4 className="text-white font-semibold">
-                                {post.author && post.author.displayName
-                                  ? post.author.displayName
-                                  : "Unknown User"}
-                              </h4>
-                              <div className="flex items-center gap-1">
-                                <FaUser className="text-yellow-400 text-xs" />
-                                <span className="text-yellow-400 text-sm">
-                                  @
-                                  {post.author && post.author.username
-                                    ? post.author.username
-                                    : "unknown"}
+                        {/* Type Badge */}
+                        <div className="absolute top-4 right-4 z-10">
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                              post.type === "REQUEST"
+                                ? "bg-blue-500 text-white"
+                                : "bg-green-500 text-white"
+                            }`}
+                          >
+                            {post.type === "REQUEST" ? "Request" : "Offer"}
+                          </span>
+                        </div>
+
+                        {/* Blue Header Section */}
+                        <div
+                          className="p-6 pb-4"
+                          style={{ backgroundColor: "rgb(9, 13, 33)" }}
+                        >
+                          <div className="flex justify-between items-start pr-20">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
+                                <span className="text-white font-bold text-sm">
+                                  {post.author && post.author.displayName ? (
+                                    post.author.displayName
+                                      .charAt(0)
+                                      .toUpperCase()
+                                  ) : (
+                                    <FaUser className="text-white" />
+                                  )}
                                 </span>
+                              </div>
+                              <div>
+                                <h4 className="text-white font-semibold">
+                                  {post.author && post.author.displayName
+                                    ? post.author.displayName
+                                    : "Unknown User"}
+                                </h4>
+                                <div className="flex items-center gap-1">
+                                  <FaUser className="text-yellow-400 text-xs" />
+                                  <span className="text-yellow-400 text-sm">
+                                    @
+                                    {post.author?.username ||
+                                      post.author?.displayName ||
+                                      "unknown"}
+                                  </span>
+                                </div>
                               </div>
                             </div>
                           </div>
                         </div>
-                      </div>
 
-                      {/* White Content Section */}
-                      <div className="p-6 pt-4 bg-white">
-                        <div className="mb-4">
-                          <h3 className="text-lg font-bold text-gray-800 mb-2">
-                            {post.title}
-                          </h3>
-                          {post.description && (
-                            <p className="text-gray-600 text-sm line-clamp-2">
-                              {post.description}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="flex flex-wrap gap-3 text-sm text-gray-500 mb-4">
-                          {post.locationName && (
-                            <div className="flex items-center gap-1">
-                              <FaMapMarkerAlt />
-                              <span>{post.locationName}</span>
-                            </div>
-                          )}
-                          <div className="flex items-center gap-1">
-                            <FaClock />
-                            <span>{getTimeAgo(post.createdAt)}</span>
+                        {/* White Content Section */}
+                        <div className="p-6 pt-4 bg-white">
+                          <div className="mb-4">
+                            <h3 className="text-lg font-bold text-gray-800 mb-2">
+                              {post.title}
+                            </h3>
+                            {post.description && (
+                              <p className="text-gray-600 text-sm line-clamp-2">
+                                {post.description}
+                              </p>
+                            )}
                           </div>
-                          {post.scheduledTime && (
-                            <div className="flex items-center gap-1 text-blue-600">
+
+                          <div className="flex flex-wrap gap-3 text-sm text-gray-500 mb-4">
+                            {post.locationName && (
+                              <div className="flex items-center gap-1">
+                                <FaMapMarkerAlt />
+                                <span>{post.locationName}</span>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-1">
                               <FaClock />
-                              <span>
-                                Scheduled: {formatDate(post.scheduledTime)}
+                              <span>{getTimeAgo(post.createdAt)}</span>
+                            </div>
+                            {post.scheduledTime && (
+                              <div className="flex items-center gap-1 text-blue-600">
+                                <FaClock />
+                                <span>
+                                  Scheduled: {formatDate(post.scheduledTime)}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {post.category && (
+                            <div className="mb-4">
+                              <span className="inline-block px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
+                                {post.category.replace("_", " ")}
                               </span>
                             </div>
                           )}
-                        </div>
 
-                        {post.category && (
-                          <div className="mb-4">
-                            <span className="inline-block px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
-                              {post.category.replace("_", " ")}
+                          <div className="flex justify-between items-center">
+                            {post.price ? (
+                              <div className="flex items-center gap-1 text-green-500">
+                                <FaDollarSign />
+                                <span className="text-2xl font-bold">
+                                  {post.price}
+                                </span>
+                                <span className="text-sm font-medium text-gray-600">
+                                  {post.paymentType || "FIXED"}
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="text-gray-500 text-sm">
+                                Price negotiable
+                              </div>
+                            )}
+                            <div className="flex gap-2">
+                              <Button
+                                className={`px-4 py-2 text-sm ${
+                                  isOwnPost
+                                    ? "bg-gray-700 hover:bg-gray-800"
+                                    : post.type === "REQUEST"
+                                      ? "bg-blue-600 hover:bg-blue-700"
+                                      : "bg-green-600 hover:bg-green-700"
+                                } text-white`}
+                                disabled={actionLoadingPostId === post.id}
+                                onClick={() => {
+                                  if (isOwnPost) {
+                                    router.push(`/posts/${post.id}`);
+                                    return;
+                                  }
+
+                                  if (post.type === "REQUEST") {
+                                    acceptPost(post.id);
+                                    return;
+                                  }
+
+                                  router.push(
+                                    `/messages?userId=${post.author?.id || ""}&postId=${post.id}`,
+                                  );
+                                }}
+                              >
+                                {actionLoadingPostId === post.id
+                                  ? "Working..."
+                                  : isOwnPost
+                                    ? "View Post"
+                                    : post.type === "REQUEST"
+                                      ? "Help Out"
+                                      : "Message"}
+                              </Button>
+                              <button
+                                onClick={() =>
+                                  setError("Likes are not implemented yet.")
+                                }
+                                className="p-2 text-gray-400 hover:text-red-400 transition-colors"
+                              >
+                                <FaHeart />
+                              </button>
+                              <button
+                                onClick={() =>
+                                  isOwnPost
+                                    ? router.push(
+                                        `/notifications?postId=${post.id}`,
+                                      )
+                                    : router.push(
+                                        `/messages?userId=${post.author?.id || ""}&postId=${post.id}`,
+                                      )
+                                }
+                                className="p-2 text-gray-400 hover:text-blue-400 transition-colors"
+                                title={
+                                  isOwnPost
+                                    ? "View messages about this post"
+                                    : "Open message thread"
+                                }
+                              >
+                                <FaComment />
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="mt-3 pt-3 border-t border-gray-100">
+                            <span
+                              className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                                post.status === "OPEN"
+                                  ? "bg-green-100 text-green-800"
+                                  : post.status === "ACCEPTED"
+                                    ? "bg-blue-100 text-blue-800"
+                                    : post.status === "IN_PROGRESS"
+                                      ? "bg-yellow-100 text-yellow-800"
+                                      : post.status === "COMPLETED"
+                                        ? "bg-purple-100 text-purple-800"
+                                        : "bg-gray-100 text-gray-800"
+                              }`}
+                            >
+                              {post.status.replace("_", " ")}
                             </span>
                           </div>
-                        )}
-
-                        <div className="flex justify-between items-center">
-                          {post.price ? (
-                            <div className="flex items-center gap-1 text-green-500">
-                              <FaDollarSign />
-                              <span className="text-2xl font-bold">
-                                {post.price}
-                              </span>
-                              <span className="text-sm font-medium text-gray-600">
-                                {post.paymentType || "FIXED"}
-                              </span>
-                            </div>
-                          ) : (
-                            <div className="text-gray-500 text-sm">
-                              Price negotiable
-                            </div>
-                          )}
-                          <div className="flex gap-2">
-                            <Button
-                              className={`px-4 py-2 text-sm ${
-                                post.type === "REQUEST"
-                                  ? "bg-blue-600 hover:bg-blue-700"
-                                  : "bg-green-600 hover:bg-green-700"
-                              } text-white`}
-                              onClick={() => {
-                                console.log("Post clicked:", post.id);
-                              }}
-                            >
-                              {post.type === "REQUEST"
-                                ? "Help Out"
-                                : "View Details"}
-                            </Button>
-                            <button className="p-2 text-gray-400 hover:text-red-400 transition-colors">
-                              <FaHeart />
-                            </button>
-                            <button className="p-2 text-gray-400 hover:text-blue-400 transition-colors">
-                              <FaComment />
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="mt-3 pt-3 border-t border-gray-100">
-                          <span
-                            className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                              post.status === "OPEN"
-                                ? "bg-green-100 text-green-800"
-                                : post.status === "ACCEPTED"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : post.status === "IN_PROGRESS"
-                                    ? "bg-yellow-100 text-yellow-800"
-                                    : post.status === "COMPLETED"
-                                      ? "bg-purple-100 text-purple-800"
-                                      : "bg-gray-100 text-gray-800"
-                            }`}
-                          >
-                            {post.status.replace("_", " ")}
-                          </span>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
 

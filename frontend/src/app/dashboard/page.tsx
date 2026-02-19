@@ -47,10 +47,8 @@ export default function DashboardPage() {
   const loadMyPosts = useCallback(async () => {
     try {
       setLoading(true);
-      // TODO: Implement getUserPosts API call
-      // const response = await postsApi.getUserPosts(user.id);
-      // setMyPosts(response);
-      setMyPosts([]); // Placeholder until API is implemented
+      const response = await postsApi.getUserPosts();
+      setMyPosts(response);
       setError("");
     } catch (error: any) {
       console.error("Error loading my posts:", error);
@@ -63,10 +61,8 @@ export default function DashboardPage() {
   const loadAcceptedPosts = useCallback(async () => {
     try {
       setLoading(true);
-      // TODO: Implement getAcceptedPosts API call
-      // const response = await postsApi.getAcceptedPosts(user.id);
-      // setAcceptedPosts(response);
-      setAcceptedPosts([]); // Placeholder until API is implemented
+      const response = await postsApi.getAcceptedPosts();
+      setAcceptedPosts(response);
       setError("");
     } catch (error: any) {
       console.error("Error loading accepted posts:", error);
@@ -330,8 +326,7 @@ export default function DashboardPage() {
                             size="sm"
                             variant="outline"
                             onClick={() => {
-                              // TODO: Navigate to post details or edit
-                              console.log("View post:", post.id);
+                              router.push(`/marketplace?focusPost=${post.id}`);
                             }}
                           >
                             View Details
@@ -341,8 +336,7 @@ export default function DashboardPage() {
                               size="sm"
                               variant="outline"
                               onClick={() => {
-                                // TODO: Navigate to edit post
-                                console.log("Edit post:", post.id);
+                                router.push(`/create-post?editId=${post.id}`);
                               }}
                             >
                               Edit
