@@ -11,7 +11,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const backendUrl = `http://localhost:8080/api/friends/request/${params.id}/accept`;
+    const backendUrl = `http://localhost:8080/api/friends/requests/${params.id}/accept`;
     
     const response = await fetch(backendUrl, {
       method: 'PUT',

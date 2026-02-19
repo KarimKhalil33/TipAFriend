@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import {
@@ -12,76 +12,30 @@ import {
   FaExclamationCircle,
   FaDollarSign,
 } from "react-icons/fa";
+import { notificationsApi } from "@/lib/api";
+import type { Notification } from "@/lib/api";
 
 export default function NotificationsPage() {
   const [filter, setFilter] = useState("all"); // "all", "unread"
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock notifications data
-  const notifications = [
-    {
-      id: 1,
-      type: "friend_request",
-      message: "Alex Johnson sent you a friend request",
-      time: "2 hours ago",
-      isRead: false,
-      avatar: "AJ",
-      actionUrl: "/friends/requests",
-    },
-    {
-      id: 2,
-      type: "post_liked",
-      message: 'Sarah Johnson liked your post "Need help moving boxes"',
-      time: "4 hours ago",
-      isRead: false,
-      avatar: "SJ",
-      actionUrl: "/dashboard",
-    },
-    {
-      id: 3,
-      type: "new_post",
-      message: 'Mike Chen posted a new offer: "Can walk your dog Tuesday 3PM"',
-      time: "6 hours ago",
-      isRead: true,
-      avatar: "MC",
-      actionUrl: "/dashboard",
-    },
-    {
-      id: 4,
-      type: "message",
-      message: "Emma Wilson sent you a message about grocery shopping",
-      time: "8 hours ago",
-      isRead: false,
-      avatar: "EW",
-      actionUrl: "/messages/1",
-    },
-    {
-      id: 5,
-      type: "post_accepted",
-      message: "Your moving help request was accepted by David Kim",
-      time: "1 day ago",
-      isRead: true,
-      avatar: "DK",
-      actionUrl: "/dashboard",
-    },
-    {
-      id: 6,
-      type: "payment_received",
-      message: "You received 25 CAD payment from Emma Wilson",
-      time: "2 days ago",
-      isRead: true,
-      avatar: "EW",
-      actionUrl: "/payments",
-    },
-    {
-      id: 7,
-      type: "task_completed",
-      message: "Task completed! Please rate your experience with Mike Chen",
-      time: "3 days ago",
-      isRead: true,
-      avatar: "MC",
-      actionUrl: "/reviews/new",
-    },
-  ];
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await notificationsApi.getNotifications();
+        setNotifications(data);
+      } catch (err: any) {
+        setError(err.message || "Failed to load notifications");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchNotifications();
+  }, []);
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -105,18 +59,48 @@ export default function NotificationsPage() {
   };
 
   const filteredNotifications = notifications.filter(
-    (notification) => filter === "all" || !notification.isRead,
+    (notification) => filter === "all" || !notification.read,
   );
 
-  const markAsRead = (notificationId: number) => {
-    // In real app, this would be an API call
-    console.log("Marking notification as read:", notificationId);
+  const markAsRead = async (notificationId: number) => {
+    try {
+      await notificationsApi.markAsRead(notificationId);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notificationId ? { ...n, read: true } : n)),
+      );
+    } catch (err) {
+      // Optionally show error
+    }
   };
 
-  const markAllAsRead = () => {
-    // In real app, this would be an API call
-    console.log("Marking all notifications as read");
+  const markAllAsRead = async () => {
+    try {
+      await Promise.all(
+        notifications
+          .filter((n) => !n.read)
+          .map((n) => notificationsApi.markAsRead(n.id)),
+      );
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    } catch (err) {
+      // Optionally show error
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-gray-500 text-lg">Loading notifications...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-red-500 text-lg">{error}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-gray-50 to-white text-gray-900 overflow-y-auto">
@@ -198,7 +182,7 @@ export default function NotificationsPage() {
               <div
                 key={notification.id}
                 className={`bg-white rounded-2xl shadow-sm p-4 hover:shadow-md transition-all cursor-pointer ${
-                  !notification.isRead ? "border-l-4 border-blue-500" : ""
+                  !notification.read ? "border-l-4 border-blue-500" : ""
                 }`}
                 onClick={() => markAsRead(notification.id)}
               >
@@ -215,13 +199,13 @@ export default function NotificationsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-3">
                       <p
-                        className={`text-gray-800 ${!notification.isRead ? "font-medium" : ""}`}
+                        className={`text-gray-800 ${!notification.read ? "font-medium" : ""}`}
                       >
                         {notification.message}
                       </p>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {getNotificationIcon(notification.type)}
-                        {!notification.isRead && (
+                        {!notification.read && (
                           <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                         )}
                       </div>

@@ -42,11 +42,19 @@ export async function POST(request: NextRequest) {
     const token = request.headers.get('Authorization')?.replace('Bearer ', '');
     const body = await request.json();
     
+    console.log('Received friend request body:', body);
+    console.log('toUserId value:', body.toUserId, 'type:', typeof body.toUserId);
+    
     if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const backendUrl = `http://localhost:8080/api/friends/request`;
+    if (!body.toUserId) {
+      console.error('toUserId is missing or null:', body);
+      return NextResponse.json({ error: 'toUserId is required' }, { status: 400 });
+    }
+
+    const backendUrl = `http://localhost:8080/api/friends/requests`;
     
     const response = await fetch(backendUrl, {
       method: 'POST',

@@ -1,4 +1,4 @@
-// src/lib/api.ts
+
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
 
@@ -10,7 +10,7 @@ const getAuthToken = (): string | null => {
   return null;
 };
 
-// Helper function to make authenticated requests
+// Helper function to make authenticated requests directly to backend
 const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
   const token = getAuthToken();
   const headers: Record<string, string> = {
@@ -22,9 +22,9 @@ const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  // For authenticated requests, use Next.js API routes to avoid CORS issues
-  const apiUrl = url.startsWith('/') ? `/api${url}` : `/api/${url}`;
-  
+  // Use backend API_BASE_URL for all requests
+  const apiUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url.startsWith('/') ? url : '/' + url}`;
+
   const response = await fetch(apiUrl, {
     ...options,
     headers,
@@ -165,7 +165,7 @@ export interface Notification {
 // Auth API
 export const authApi = {
   register: async (data: RegisterRequest): Promise<AuthResponse> => {
-    const response = await fetch('/api/signup', {
+    const response = await fetch(`${API_BASE_URL}/signup`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -182,7 +182,7 @@ export const authApi = {
   },
 
   login: async (data: LoginRequest): Promise<AuthResponse> => {
-    const response = await fetch('/api/login', {
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -220,7 +220,7 @@ export const usersApi = {
     const token = getAuthToken();
     if (!token) throw new Error('No authentication token');
 
-    const response = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`, {
+    const response = await fetch(`${API_BASE_URL}/users/search?q=${encodeURIComponent(query)}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -237,20 +237,45 @@ export const usersApi = {
 
 // Friends API
 export const friendsApi = {
+      getFriendsList: async (): Promise<User[]> => {
+    const token = getAuthToken();
+    if (!token) throw new Error('No authentication token');
+    console.log("API:");
+    const response = await fetch(`${API_BASE_URL}/friends/list`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    console.log("apiiiii:", response);
+
+    if (!response.ok) {
+        console.log("apiiiii:", response);
+      throw new Error('Failed to get friends list');
+    }
+
+    return response.json();
+  },
+
   sendFriendRequest: async (toUserId: number): Promise<void> => {
     const token = getAuthToken();
     if (!token) throw new Error('No authentication token');
 
-    const response = await fetch('/api/friends', {
+    const payload = { toUserId: toUserId };
+    const stringifiedPayload = JSON.stringify(payload);
+
+    const response = await fetch(`${API_BASE_URL}/friends/requests`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ userId: toUserId }),
+      body: stringifiedPayload,
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API: Friend request failed:', errorText);
       throw new Error('Failed to send friend request');
     }
   },
@@ -259,7 +284,7 @@ export const friendsApi = {
     const token = getAuthToken();
     if (!token) throw new Error('No authentication token');
 
-    const response = await fetch(`/api/friends/accept/${requestId}`, {
+    const response = await fetch(`${API_BASE_URL}/friends/requests/${requestId}/accept`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -276,7 +301,7 @@ export const friendsApi = {
     const token = getAuthToken();
     if (!token) throw new Error('No authentication token');
 
-    const response = await fetch(`/api/friends/decline/${requestId}`, {
+    const response = await fetch(`${API_BASE_URL}/friends/requests/${requestId}/decline`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -293,7 +318,7 @@ export const friendsApi = {
     const token = getAuthToken();
     if (!token) throw new Error('No authentication token');
 
-    const response = await fetch('/api/friends/requests', {
+    const response = await fetch(`${API_BASE_URL}/friends/requests/incoming`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -304,15 +329,14 @@ export const friendsApi = {
       throw new Error('Failed to get friend requests');
     }
 
-    const data = await response.json();
-    return data.incoming || [];
+    return await response.json();
   },
 
   getOutgoingRequests: async (): Promise<FriendRequest[]> => {
     const token = getAuthToken();
     if (!token) throw new Error('No authentication token');
 
-    const response = await fetch('/api/friends/requests', {
+    const response = await fetch(`${API_BASE_URL}/friends/requests/outgoing`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -323,15 +347,14 @@ export const friendsApi = {
       throw new Error('Failed to get friend requests');
     }
 
-    const data = await response.json();
-    return data.outgoing || [];
+    return await response.json();
   },
 
   getFriends: async (): Promise<number[]> => {
     const token = getAuthToken();
     if (!token) throw new Error('No authentication token');
 
-    const response = await fetch('/api/friends', {
+    const response = await fetch(`${API_BASE_URL}/friends`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -349,7 +372,7 @@ export const friendsApi = {
     const token = getAuthToken();
     if (!token) throw new Error('No authentication token');
 
-    const response = await fetch(`/api/friends/${friendId}`, {
+    const response = await fetch(`${API_BASE_URL}/friends/${friendId}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -369,7 +392,7 @@ export const postsApi = {
     const token = getAuthToken();
     if (!token) throw new Error('No authentication token');
 
-    const response = await fetch('/api/posts', {
+    const response = await fetch(`${API_BASE_URL}/posts`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -425,7 +448,7 @@ export const postsApi = {
       const token = getAuthToken();
       if (!token) throw new Error('No authentication token');
 
-      const response = await fetch('/api/posts/my-posts', {
+      const response = await fetch(`${API_BASE_URL}/posts/my-posts`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -444,7 +467,7 @@ export const postsApi = {
     const token = getAuthToken();
     if (!token) throw new Error('No authentication token');
 
-    const response = await fetch('/api/posts/accepted', {
+    const response = await fetch(`${API_BASE_URL}/posts/accepted`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',

@@ -138,6 +138,23 @@ List outgoing friend requests.
 ### GET /api/friends
 List friend IDs for the authenticated user.
 
+### GET /api/friends/list
+List full user objects for all friends of the authenticated user.
+
+**Response**
+```json
+[
+  {
+    "id": 1,
+    "email": "user@example.com",
+    "username": "karim",
+    "displayName": "Karim Khalil",
+    "photoUrl": null,
+    "bio": null
+  }
+]
+```
+
 ### DELETE /api/friends/{friendId}
 Remove a friend.
 

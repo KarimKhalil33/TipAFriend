@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import { useAuth } from "@/contexts/AuthContext";
-import { postsApi, Post } from "@/lib/api";
+import { postsApi, usersApi, Post, User } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import {
   FaSearch,
@@ -35,6 +35,7 @@ export default function MarketplacePage() {
   );
   const [searchTerm, setSearchTerm] = useState("");
   const [posts, setPosts] = useState<Post[]>([]);
+  const [authorMap, setAuthorMap] = useState<Record<number, User>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [page, setPage] = useState(0);
@@ -71,6 +72,29 @@ export default function MarketplacePage() {
       setPosts(response.content);
       setTotalPages(response.totalPages);
       setError("");
+
+      // Collect missing author IDs
+      const missingAuthorIds = response.content
+        .filter(
+          (post: Post) =>
+            !post.author || !post.author.displayName || !post.author.username,
+        )
+        .map((post: Post) => post.author?.id)
+        .filter((id: number | undefined): id is number => !!id);
+
+      // Remove duplicates
+      const uniqueMissingIds = Array.from(new Set(missingAuthorIds));
+
+      if (uniqueMissingIds.length > 0) {
+        const userResults = await Promise.all(
+          uniqueMissingIds.map((id) => usersApi.getUser(id).catch(() => null)),
+        );
+        const newMap: Record<number, User> = {};
+        userResults.forEach((user) => {
+          if (user && user.id) newMap[user.id] = user;
+        });
+        setAuthorMap((prev) => ({ ...prev, ...newMap }));
+      }
     } catch (error: any) {
       console.error("Error loading feed:", error);
       setError("Failed to load posts. Please try again.");
@@ -114,12 +138,27 @@ export default function MarketplacePage() {
     return null;
   }
 
-  const filteredPosts = posts.filter(
-    (post) =>
-      post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (post.description &&
-        post.description.toLowerCase().includes(searchTerm.toLowerCase())),
-  );
+  const filteredPosts = posts
+    .filter(
+      (post) =>
+        post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (post.description &&
+          post.description.toLowerCase().includes(searchTerm.toLowerCase())),
+    )
+    .map((post) => {
+      // Patch author if missing
+      if (
+        (!post.author?.displayName || !post.author?.username) &&
+        post.author?.id &&
+        authorMap[post.author.id]
+      ) {
+        return {
+          ...post,
+          author: authorMap[post.author.id],
+        };
+      }
+      return post;
+    });
 
   const categories = [
     { id: "all", name: "All Categories", count: posts.length },
@@ -379,19 +418,28 @@ export default function MarketplacePage() {
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
                               <span className="text-white font-bold text-sm">
-                                {post.author.displayName
-                                  .charAt(0)
-                                  .toUpperCase()}
+                                {post.author && post.author.displayName ? (
+                                  post.author.displayName
+                                    .charAt(0)
+                                    .toUpperCase()
+                                ) : (
+                                  <FaUser className="text-white" />
+                                )}
                               </span>
                             </div>
                             <div>
                               <h4 className="text-white font-semibold">
-                                {post.author.displayName}
+                                {post.author && post.author.displayName
+                                  ? post.author.displayName
+                                  : "Unknown User"}
                               </h4>
                               <div className="flex items-center gap-1">
                                 <FaUser className="text-yellow-400 text-xs" />
                                 <span className="text-yellow-400 text-sm">
-                                  @{post.author.username}
+                                  @
+                                  {post.author && post.author.username
+                                    ? post.author.username
+                                    : "unknown"}
                                 </span>
                               </div>
                             </div>

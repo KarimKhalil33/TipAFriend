@@ -51,6 +51,7 @@ export default function ProfilePage() {
   const [incomingRequests, setIncomingRequests] = useState<FriendRequest[]>([]);
   const [outgoingRequests, setOutgoingRequests] = useState<FriendRequest[]>([]);
   const [friends, setFriends] = useState<number[]>([]);
+  const [friendUsers, setFriendUsers] = useState<User[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
 
   const { user, isAuthenticated } = useAuth();
@@ -80,6 +81,8 @@ export default function ProfilePage() {
       try {
         setSearchLoading(true);
         const results = await usersApi.searchUsers(query);
+        console.log("Search results received:", results);
+        console.log("First result structure:", results[0]);
         setSearchResults(results.filter((u) => u.id !== user?.id)); // Exclude self
       } catch (error: any) {
         console.error("Error searching users:", error);
@@ -129,15 +132,34 @@ export default function ProfilePage() {
   const loadFriends = useCallback(async () => {
     try {
       setLoading(true);
-      const [friendsData, incomingData, outgoingData] = await Promise.all([
-        friendsApi.getFriends(),
+      let friendsList: User[] = [];
+      let friendIds: number[] = [];
+      let listError = false;
+      try {
+        friendsList = await friendsApi.getFriendsList();
+        friendIds = friendsList.map((u) => u.id);
+      } catch (err) {
+        // fallback to /api/friends (IDs) if /api/friends/list fails
+        listError = true;
+        friendIds = await friendsApi.getFriends();
+        if (Array.isArray(friendIds) && friendIds.length > 0) {
+          const userResults = await Promise.all(
+            friendIds.map((id) => usersApi.getUser(id).catch(() => null)),
+          );
+          friendsList = userResults.filter((u): u is User => !!u);
+        } else {
+          friendsList = [];
+        }
+      }
+      setFriendUsers(friendsList);
+      setFriends(friendIds);
+      const [incomingData, outgoingData] = await Promise.all([
         friendsApi.getIncomingRequests(),
         friendsApi.getOutgoingRequests(),
       ]);
-      setFriends(friendsData);
       setIncomingRequests(incomingData);
       setOutgoingRequests(outgoingData);
-      setError("");
+      setError(listError ? "Some friend details may be missing." : "");
     } catch (error: any) {
       console.error("Error loading friends:", error);
       setError("Failed to load friends data.");
@@ -148,10 +170,17 @@ export default function ProfilePage() {
 
   const sendFriendRequest = async (userId: number) => {
     try {
+      console.log(
+        "Sending friend request to userId:",
+        userId,
+        "type:",
+        typeof userId,
+      );
       await friendsApi.sendFriendRequest(userId);
       loadFriends(); // Refresh data
     } catch (error: any) {
       console.error("Error sending friend request:", error);
+      setError(`Failed to send friend request: ${error.message}`);
     }
   };
 
@@ -201,7 +230,7 @@ export default function ProfilePage() {
   }
 
   const currentPosts = activeTab === "my-posts" ? myPosts : acceptedPosts;
-
+  console.log("friendUsers:", friendUsers);
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white text-gray-900">
       {/* Background Wave Pattern */}
@@ -386,40 +415,54 @@ export default function ProfilePage() {
                       <div className="mt-3 space-y-2 max-h-40 overflow-y-auto">
                         {searchResults.map((searchUser) => (
                           <div
-                            key={searchUser.id}
+                            key={searchUser.id || Math.random()}
                             className="flex items-center justify-between p-3 border rounded-lg"
                           >
                             <div className="flex items-center gap-3">
                               <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center">
                                 <span className="text-white text-sm font-bold">
                                   {searchUser.displayName
-                                    .charAt(0)
-                                    .toUpperCase()}
+                                    ?.charAt(0)
+                                    ?.toUpperCase() || "?"}
                                 </span>
                               </div>
                               <div>
                                 <div className="font-medium">
-                                  {searchUser.displayName}
+                                  {searchUser.displayName || "Unknown User"}
                                 </div>
                                 <div className="text-sm text-gray-500">
-                                  @{searchUser.username}
+                                  @{searchUser.username || "unknown"}
                                 </div>
                               </div>
                             </div>
                             <Button
                               size="sm"
-                              onClick={() => sendFriendRequest(searchUser.id)}
+                              onClick={() => {
+                                if (searchUser?.id) {
+                                  sendFriendRequest(searchUser.id);
+                                }
+                              }}
                               disabled={
+                                friends.includes(searchUser?.id) ||
                                 outgoingRequests.some(
-                                  (req) => req.toUser.id === searchUser.id,
-                                ) || friends.includes(searchUser.id)
+                                  (req) => req.toUser?.id === searchUser?.id,
+                                )
                               }
-                              className="bg-blue-600 hover:bg-blue-700 text-white"
+                              className={
+                                friends.includes(searchUser?.id)
+                                  ? "bg-green-500 text-white cursor-default"
+                                  : outgoingRequests.some(
+                                        (req) =>
+                                          req.toUser?.id === searchUser?.id,
+                                      )
+                                    ? "bg-gray-400 text-white cursor-default"
+                                    : "bg-blue-600 hover:bg-blue-700 text-white"
+                              }
                             >
-                              {friends.includes(searchUser.id) ? (
+                              {friends.includes(searchUser?.id) ? (
                                 "Friends"
                               ) : outgoingRequests.some(
-                                  (req) => req.toUser.id === searchUser.id,
+                                  (req) => req.toUser?.id === searchUser?.id,
                                 ) ? (
                                 "Sent"
                               ) : (
@@ -449,17 +492,18 @@ export default function ProfilePage() {
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center">
                                 <span className="text-white font-bold">
-                                  {request.fromUser.displayName
-                                    .charAt(0)
-                                    .toUpperCase()}
+                                  {request.fromUser?.displayName
+                                    ?.charAt(0)
+                                    ?.toUpperCase() || "?"}
                                 </span>
                               </div>
                               <div>
                                 <div className="font-medium">
-                                  {request.fromUser.displayName}
+                                  {request.fromUser?.displayName ||
+                                    "Unknown User"}
                                 </div>
                                 <div className="text-sm text-gray-500">
-                                  @{request.fromUser.username}
+                                  @{request.fromUser?.username || "unknown"}
                                 </div>
                                 <div className="text-xs text-gray-400">
                                   {new Date(
@@ -496,22 +540,36 @@ export default function ProfilePage() {
                   {/* Friends List */}
                   <div>
                     <h3 className="text-lg font-semibold mb-3">
-                      Your Friends ({friends.length})
+                      Your Friends ({friendUsers.length})
                     </h3>
-                    {friends.length === 0 ? (
+                    {friendUsers.length === 0 ? (
                       <div className="text-center py-8 text-gray-500">
                         <FaUserFriends className="text-4xl mx-auto mb-2 opacity-50" />
                         <p>No friends yet. Search for people to add!</p>
                       </div>
                     ) : (
-                      <div className="text-center py-8 text-gray-500">
-                        <p>
-                          Friends list will be populated when backend provides
-                          user details for friend IDs.
-                        </p>
-                        <p className="text-sm mt-1">
-                          Friend IDs: {friends.join(", ")}
-                        </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {friendUsers.map((friend) => (
+                          <div
+                            key={friend.id}
+                            className="flex items-center gap-4 p-4 border rounded-lg bg-white shadow-sm"
+                          >
+                            <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center">
+                              <span className="text-white font-bold text-lg">
+                                {friend.displayName?.charAt(0).toUpperCase() ||
+                                  "?"}
+                              </span>
+                            </div>
+                            <div>
+                              <div className="font-medium text-gray-900">
+                                {friend.displayName || "Unknown User"}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                @{friend.username || "unknown"}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
@@ -531,17 +589,18 @@ export default function ProfilePage() {
                             <div className="flex items-center gap-3">
                               <div className="w-8 h-8 rounded-full bg-gray-500 flex items-center justify-center">
                                 <span className="text-white text-sm font-bold">
-                                  {request.toUser.displayName
-                                    .charAt(0)
-                                    .toUpperCase()}
+                                  {request.toUser?.displayName
+                                    ?.charAt(0)
+                                    ?.toUpperCase() || "?"}
                                 </span>
                               </div>
                               <div>
                                 <div className="font-medium">
-                                  {request.toUser.displayName}
+                                  {request.toUser?.displayName ||
+                                    "Unknown User"}
                                 </div>
                                 <div className="text-sm text-gray-500">
-                                  @{request.toUser.username}
+                                  @{request.toUser?.username || "unknown"}
                                 </div>
                               </div>
                             </div>
