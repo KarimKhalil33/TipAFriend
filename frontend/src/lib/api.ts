@@ -2,6 +2,35 @@
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
 
+export class ApiError extends Error {
+  code?: string;
+  details?: unknown;
+  status?: number;
+
+  constructor(message: string, options?: { code?: string; details?: unknown; status?: number }) {
+    super(message);
+    this.name = 'ApiError';
+    this.code = options?.code;
+    this.details = options?.details;
+    this.status = options?.status;
+  }
+}
+
+const toApiError = async (response: Response, fallbackMessage: string): Promise<ApiError> => {
+  const payload = await response.json().catch(() => null);
+  const message =
+    payload?.message ||
+    payload?.error ||
+    fallbackMessage ||
+    `HTTP error! status: ${response.status}`;
+
+  return new ApiError(message, {
+    code: payload?.errorCode || payload?.code,
+    details: payload?.details,
+    status: response.status,
+  });
+};
+
 // Helper function to get auth token
 const getAuthToken = (): string | null => {
   if (typeof window !== 'undefined') {
@@ -31,8 +60,7 @@ const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ message: 'An error occurred' }));
-    throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    throw await toApiError(response, 'An error occurred');
   }
 
   return response;
@@ -41,7 +69,7 @@ const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
 // Types based on API documentation
 export interface User {
   id: number;
-  email: string;
+  email?: string;
   username: string;
   displayName: string;
   photoUrl?: string;
@@ -120,21 +148,29 @@ export interface TaskAssignment {
 
 export interface Payment {
   id: number;
-  post: Post;
-  payer: User;
-  payee: User;
+  post?: Post;
+  postId?: number;
+  payer?: User;
+  payerId?: number;
+  payee?: User;
+  payeeId?: number;
   amount: number;
   status: string;
   stripePaymentIntentId?: string;
   stripeClientSecret?: string;
+  errorMessage?: string | null;
   createdAt: string;
+  paidAt?: string | null;
 }
 
 export interface Review {
   id: number;
-  taskAssignment: TaskAssignment;
-  reviewer: User;
-  reviewee: User;
+  taskAssignment?: TaskAssignment;
+  taskAssignmentId?: number;
+  reviewer?: User;
+  reviewerId?: number;
+  reviewee?: User;
+  revieweeId?: number;
   rating: number;
   comment?: string;
   createdAt: string;
@@ -144,14 +180,20 @@ export interface Conversation {
   id: number;
   type: 'DIRECT' | 'TASK_THREAD';
   taskAssignment?: TaskAssignment;
+  taskAssignmentId?: number | null;
   participants: User[];
+  lastMessage?: Message;
+  unreadCount?: number;
+  updatedAt?: string;
   createdAt: string;
 }
 
 export interface Message {
   id: number;
-  conversation: Conversation;
-  sender: User;
+  conversation?: Conversation;
+  conversationId?: number;
+  sender?: User;
+  senderId?: number;
   body: string;
   createdAt: string;
 }
@@ -184,8 +226,7 @@ export const authApi = {
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: 'Registration failed' }));
-      throw new Error(errorData.message);
+      throw await toApiError(response, 'Registration failed');
     }
 
     return response.json();
@@ -201,8 +242,7 @@ export const authApi = {
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: 'Login failed' }));
-      throw new Error(errorData.message);
+      throw await toApiError(response, 'Login failed');
     }
 
     return response.json();
@@ -544,6 +584,11 @@ export const paymentsApi = {
     });
     return response.json();
   },
+
+  getPaymentByTask: async (taskAssignmentId: number): Promise<Payment> => {
+    const response = await fetchWithAuth(`/payments/by-task/${taskAssignmentId}`);
+    return response.json();
+  },
 };
 
 // Reviews API
@@ -559,6 +604,11 @@ export const reviewsApi = {
     });
     return response.json();
   },
+
+  getReviewByTask: async (taskAssignmentId: number): Promise<Review> => {
+    const response = await fetchWithAuth(`/reviews/by-task/${taskAssignmentId}`);
+    return response.json();
+  },
 };
 
 // Messaging API
@@ -572,6 +622,23 @@ export const messagingApi = {
       method: 'POST',
       body: JSON.stringify(data),
     });
+    return response.json();
+  },
+
+  getOrCreateConversation: async (data: {
+    type: 'DIRECT' | 'TASK_THREAD';
+    taskAssignmentId?: number;
+    participantIds: number[];
+  }): Promise<Conversation> => {
+    const response = await fetchWithAuth('/conversations/get-or-create', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return response.json();
+  },
+
+  getConversations: async (): Promise<Conversation[]> => {
+    const response = await fetchWithAuth('/conversations');
     return response.json();
   },
 

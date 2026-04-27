@@ -299,31 +299,51 @@ export default function ProfilePage() {
   };
 
   const createPayment = async (post: Post) => {
+    const taskAssignmentId = Number((post as any).taskAssignmentId || 0);
     const payeeId = Number((post as any).accepterId || 0);
-    if (!payeeId) {
+
+    if (!payeeId || !taskAssignmentId) {
       setError(
-        "Cannot create payment yet: no helper is attached to this task.",
+        "Payment details are not ready on this post yet. Refresh and try again.",
       );
       return;
     }
 
-    const taskAssignmentId = String((post as any).taskAssignmentId || "");
     const query = new URLSearchParams({
       postId: String(post.id),
       payeeId: String(payeeId),
       amount: String(post.price || ""),
-      taskAssignmentId,
+      taskAssignmentId: String(taskAssignmentId),
     }).toString();
     router.push(`/payments?${query}`);
   };
 
   const createReview = async (post: Post) => {
-    const taskAssignmentId = String((post as any).taskAssignmentId || "");
+    let taskAssignmentId = Number((post as any).taskAssignmentId || 0);
+
+    if (!taskAssignmentId) {
+      setError(
+        "Review details are not ready on this post yet. Refresh and try again.",
+      );
+      return;
+    }
+
     const query = new URLSearchParams({
-      taskAssignmentId,
+      taskAssignmentId: String(taskAssignmentId),
       postId: String(post.id),
     }).toString();
     router.push(`/reviews?${query}`);
+  };
+
+  const openMessagesForPost = async (post: Post) => {
+    const targetUserId = Number((post as any).accepterId || 0);
+
+    const query = new URLSearchParams({ postId: String(post.id) });
+    if (targetUserId > 0) {
+      query.set("userId", String(targetUserId));
+    }
+
+    router.push(`/messages?${query.toString()}`);
   };
 
   useEffect(() => {
@@ -358,8 +378,44 @@ export default function ProfilePage() {
     ["ACCEPTED", "OPEN"].includes(post.status);
   const canMarkComplete = (post: Post) =>
     ["ACCEPTED", "IN_PROGRESS"].includes(post.status);
-  const canPay = (post: Post) => post.status === "COMPLETED" && !!post.price;
-  const canReview = (post: Post) => post.status === "COMPLETED";
+  const canPay = (post: Post) =>
+    post.status === "COMPLETED" &&
+    !!post.price &&
+    Number((post as any).taskAssignmentId || 0) > 0 &&
+    Number((post as any).accepterId || 0) > 0;
+  const canReview = (post: Post) =>
+    post.status === "COMPLETED" &&
+    Number((post as any).taskAssignmentId || 0) > 0;
+
+  const getNextStepLabel = (post: Post) => {
+    if (activeTab === "accepted") {
+      if (canMarkInProgress(post))
+        return "Next step: mark this task as in progress.";
+      if (canMarkComplete(post))
+        return "Next step: mark this task as complete when done.";
+      return "This accepted task is complete.";
+    }
+
+    if (post.status === "OPEN") {
+      return "Next step: wait for someone to accept this post.";
+    }
+    if (["ACCEPTED", "IN_PROGRESS"].includes(post.status)) {
+      return "Next step: complete the task, then pay and review the helper.";
+    }
+    if (post.status === "COMPLETED") {
+      const hasTaskId = Number((post as any).taskAssignmentId || 0) > 0;
+      const hasAccepter = Number((post as any).accepterId || 0) > 0;
+      if (!hasTaskId || !hasAccepter) {
+        return "Waiting for final task details. Refresh once and try again.";
+      }
+
+      return canPay(post)
+        ? "Next step: pay your helper, then leave a review."
+        : "Next step: leave a review for your helper.";
+    }
+
+    return "Review details to continue.";
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white text-gray-900">
@@ -891,32 +947,35 @@ export default function ProfilePage() {
                               size="sm"
                               variant="outline"
                               onClick={() => editPostQuick(post)}
+                              disabled={post.status !== "OPEN"}
                             >
                               Edit
                             </Button>
                           )}
                           {activeTab === "accepted" && (
                             <>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() =>
-                                  updateTaskStatus(post, "in-progress")
-                                }
-                                disabled={!canMarkInProgress(post)}
-                              >
-                                In Progress
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() =>
-                                  updateTaskStatus(post, "complete")
-                                }
-                                disabled={!canMarkComplete(post)}
-                              >
-                                Complete
-                              </Button>
+                              {canMarkInProgress(post) && (
+                                <Button
+                                  size="sm"
+                                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                                  onClick={() =>
+                                    updateTaskStatus(post, "in-progress")
+                                  }
+                                >
+                                  Start Task
+                                </Button>
+                              )}
+                              {canMarkComplete(post) && (
+                                <Button
+                                  size="sm"
+                                  className="bg-green-600 hover:bg-green-700 text-white"
+                                  onClick={() =>
+                                    updateTaskStatus(post, "complete")
+                                  }
+                                >
+                                  Mark Complete
+                                </Button>
+                              )}
                             </>
                           )}
                           {activeTab === "my-posts" && (
@@ -924,38 +983,35 @@ export default function ProfilePage() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() =>
-                                  router.push(
-                                    `/notifications?postId=${post.id}`,
-                                  )
-                                }
+                                onClick={() => openMessagesForPost(post)}
                               >
-                                Interactions
+                                Messages
                               </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => createPayment(post)}
-                                disabled={!canPay(post)}
-                              >
-                                Pay
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => createReview(post)}
-                                disabled={!canReview(post)}
-                              >
-                                Review
-                              </Button>
+                              {canPay(post) && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => createPayment(post)}
+                                  className="text-indigo-700 border-indigo-200 hover:bg-indigo-50"
+                                >
+                                  Pay
+                                </Button>
+                              )}
+                              {canReview(post) && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => createReview(post)}
+                                >
+                                  Review
+                                </Button>
+                              )}
                             </>
                           )}
                         </div>
-                        {activeTab === "my-posts" && !canPay(post) && (
-                          <p className="text-xs text-gray-500 mt-2">
-                            Payment unlocks once the task is fully completed.
-                          </p>
-                        )}
+                        <p className="text-xs text-gray-500 mt-2">
+                          {getNextStepLabel(post)}
+                        </p>
                       </div>
                     </div>
                   ))}

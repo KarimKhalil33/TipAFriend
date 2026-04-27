@@ -24,7 +24,8 @@ export default function LandingPage() {
       try {
         const response = await healthApi.check();
         if (mounted) {
-          setApiHealthy(response?.status?.toLowerCase() === "ok");
+          const status = response?.status?.toLowerCase();
+          setApiHealthy(status === "ok" || status === "up");
         }
       } catch {
         if (mounted) setApiHealthy(false);

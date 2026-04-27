@@ -594,7 +594,7 @@ export default function MarketplacePage() {
                                 onClick={() =>
                                   isOwnPost
                                     ? router.push(
-                                        `/notifications?postId=${post.id}`,
+                                        `/messages?postId=${post.id}${(post as any).accepterId ? `&userId=${(post as any).accepterId}` : ""}`,
                                       )
                                     : router.push(
                                         `/messages?userId=${post.author?.id || ""}&postId=${post.id}`,
@@ -603,7 +603,7 @@ export default function MarketplacePage() {
                                 className="p-2 text-gray-400 hover:text-blue-400 transition-colors"
                                 title={
                                   isOwnPost
-                                    ? "View messages about this post"
+                                    ? "Open messages"
                                     : "Open message thread"
                                 }
                               >

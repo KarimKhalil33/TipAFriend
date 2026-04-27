@@ -1,42 +1,16 @@
-import { useEffect, useState } from "react";
+"use client";
+
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { FaBell, FaUser, FaSignOutAlt } from "react-icons/fa";
 import { useAuth } from "@/contexts/AuthContext";
-import { notificationsApi } from "@/lib/api";
+import { useNotifications } from "@/contexts/NotificationsContext";
 
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, isAuthenticated, logout } = useAuth();
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  useEffect(() => {
-    const loadUnread = async () => {
-      if (!isAuthenticated) {
-        setUnreadCount(0);
-        return;
-      }
-
-      try {
-        const raw = await notificationsApi.getNotifications();
-        const list = Array.isArray(raw)
-          ? raw
-          : Array.isArray((raw as any)?.content)
-            ? (raw as any).content
-            : [];
-
-        const unread = list.filter(
-          (n: any) => !(n.read ?? n.isRead ?? false),
-        ).length;
-        setUnreadCount(unread);
-      } catch {
-        setUnreadCount(0);
-      }
-    };
-
-    loadUnread();
-  }, [isAuthenticated, pathname]);
+  const { unreadCount } = useNotifications();
 
   const handleLogout = () => {
     logout();

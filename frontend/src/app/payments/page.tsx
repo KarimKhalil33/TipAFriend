@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
-import { paymentsApi, Payment } from "@/lib/api";
+import { ApiError, paymentsApi, Payment } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { loadStripe } from "@stripe/stripe-js";
 import {
@@ -100,6 +100,61 @@ export default function PaymentsPage() {
 
   const hasPrefill =
     initial.postId > 0 || initial.payeeId > 0 || initial.amount > 0;
+  const hasFullPrefill =
+    initial.postId > 0 && initial.payeeId > 0 && initial.amount > 0;
+  const canCreatePayment =
+    postId > 0 && payeeId > 0 && amount > 0 && !payment?.id;
+  const isPaid = payment?.status === "SUCCEEDED";
+  const hasPublishableKey =
+    !!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+
+  const toFriendlyError = (message: string) => {
+    const text = (message || "").toLowerCase();
+    if (!text || text.includes("unexpected error")) {
+      return "We couldn't start payment right now. Please try again in a moment.";
+    }
+    if (text.includes("unauthorized") || text.includes("forbidden")) {
+      return "Your session expired. Please log in again and retry payment.";
+    }
+    if (text.includes("not found")) {
+      return "This payment task could not be found. Please go back and open Pay again from your post.";
+    }
+    if (text.includes("amount")) {
+      return "Payment amount is invalid for this task. Please refresh and try again.";
+    }
+    return message;
+  };
+
+  useEffect(() => {
+    const loadExistingPayment = async () => {
+      if (initial.taskAssignmentId <= 0) return;
+
+      try {
+        setLoading(true);
+        const existing = await paymentsApi.getPaymentByTask(
+          initial.taskAssignmentId,
+        );
+        if (existing?.id) {
+          setPayment(existing);
+          setSuccess(
+            `Existing payment #${existing.id} loaded for this task.`,
+          );
+        }
+      } catch (err: any) {
+        const typedError = err as ApiError;
+        if (
+          typedError.code !== "PAYMENT_NOT_FOUND" &&
+          typedError.code !== "NOT_FOUND"
+        ) {
+          setError(toFriendlyError(typedError.message || ""));
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadExistingPayment();
+  }, [initial.taskAssignmentId]);
 
   const createPayment = async () => {
     try {
@@ -114,7 +169,7 @@ export default function PaymentsPage() {
       setPayment(created);
       if (!created.stripeClientSecret) {
         setSuccess(
-          "Payment record created. Next: choose a status in the fallback section and update it.",
+          "Payment record created. Stripe checkout is not available in this environment, so use Test Mode below to complete this payment.",
         );
       } else {
         setSuccess(
@@ -122,7 +177,9 @@ export default function PaymentsPage() {
         );
       }
     } catch (err: any) {
-      setError(err.message || "Failed to create payment");
+      setError(
+        toFriendlyError(err?.message || "Failed to create payment"),
+      );
     } finally {
       setLoading(false);
     }
@@ -140,7 +197,9 @@ export default function PaymentsPage() {
       setPayment(updated);
       setSuccess(`Payment status updated to ${updated.status}.`);
     } catch (err: any) {
-      setError(err.message || "Failed to update payment status");
+      setError(
+        toFriendlyError(err?.message || "Failed to update payment status"),
+      );
     } finally {
       setLoading(false);
     }
@@ -158,22 +217,25 @@ export default function PaymentsPage() {
         </div>
 
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-blue-800 mb-4 text-sm">
-          Step 1: Create payment record. Step 2: Confirm card payment (Stripe).
-          If Stripe keys are missing, use fallback status update.
+          You&apos;re almost done. Confirm payment securely, then continue to review.
         </div>
 
-        {hasPrefill && (
+        {hasFullPrefill && (
           <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-indigo-800 mb-4 text-sm">
-            This screen was pre-filled from your completed task.
-            {initial.taskAssignmentId > 0
-              ? ` Task Assignment: #${initial.taskAssignmentId}.`
-              : ""}
+            Ready to pay ${amount} for this completed task.
+          </div>
+        )}
+
+        {!canCreatePayment && !payment?.id && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-amber-800 mb-4 text-sm">
+            Payment details are missing. Please go back to Profile and click Pay from the completed post again.
           </div>
         )}
 
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 mb-4">
-            {error}
+            <p className="font-medium mb-1">Couldn&apos;t start payment</p>
+            <p>{error}</p>
           </div>
         )}
         {success && (
@@ -183,62 +245,72 @@ export default function PaymentsPage() {
         )}
 
         <div className="bg-white border rounded-xl p-4 space-y-3">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Post ID (the job/task being paid)
-            </label>
-            <input
-              type="number"
-              value={postId}
-              onChange={(e) => setPostId(Number(e.target.value))}
-              className="w-full border rounded px-3 py-2"
-              placeholder="Example: 42"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Payee User ID (the helper receiving money)
-            </label>
-            <input
-              type="number"
-              value={payeeId}
-              onChange={(e) => setPayeeId(Number(e.target.value))}
-              className="w-full border rounded px-3 py-2"
-              placeholder="Example: 17"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Amount (USD)
-            </label>
-            <input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(Number(e.target.value))}
-              className="w-full border rounded px-3 py-2"
-              placeholder="Example: 25"
-            />
-          </div>
+          {!hasFullPrefill && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Post ID
+                </label>
+                <input
+                  type="number"
+                  value={postId}
+                  onChange={(e) => setPostId(Number(e.target.value))}
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="Example: 42"
+                  readOnly={initial.postId > 0}
+                  disabled={loading}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Helper User ID
+                </label>
+                <input
+                  type="number"
+                  value={payeeId}
+                  onChange={(e) => setPayeeId(Number(e.target.value))}
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="Example: 17"
+                  readOnly={initial.payeeId > 0}
+                  disabled={loading}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Amount (USD)
+                </label>
+                <input
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(Number(e.target.value))}
+                  className="w-full border rounded px-3 py-2"
+                  placeholder="Example: 25"
+                  readOnly={initial.amount > 0}
+                  disabled={loading}
+                />
+              </div>
+            </>
+          )}
 
           <Button
             onClick={createPayment}
-            disabled={loading || !postId || !payeeId || !amount}
+            disabled={loading || !canCreatePayment}
             className="bg-blue-600 hover:bg-blue-700 text-white"
           >
-            1) Create Payment Record
+            {hasFullPrefill ? "Continue to Secure Payment" : "Create Payment"}
           </Button>
 
           {payment && (
             <div className="border-t pt-3 mt-3 space-y-2">
               <div className="text-sm text-gray-700">
-                Payment ID: {payment.id}
+                Payment reference: #{payment.id}
               </div>
               <div className="text-sm text-gray-700">
-                Current Status: {payment.status}
+                Status: {payment.status}
               </div>
 
               {payment.stripeClientSecret &&
-              process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ? (
+              hasPublishableKey ? (
                 <>
                   <div className="text-sm font-medium text-gray-800">
                     Step 2: Pay with Card
@@ -262,30 +334,70 @@ export default function PaymentsPage() {
                   </Elements>
                 </>
               ) : (
-                <div className="text-xs text-gray-500">
-                  Stripe client secret or publishable key missing.
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-amber-800 text-sm space-y-2">
+                  <p className="font-medium">Card checkout is unavailable right now.</p>
+                  {!hasPublishableKey ? (
+                    <p>
+                      Frontend Stripe publishable key is missing.
+                    </p>
+                  ) : (
+                    <p>
+                      Backend did not return a Stripe client secret for this payment.
+                    </p>
+                  )}
+                  <p>
+                    Use the Test Mode section below to finish payment in local/dev,
+                    or configure Stripe keys for real card checkout.
+                  </p>
                 </div>
               )}
 
-              <div className="text-sm font-medium text-gray-800">
-                Fallback (testing/manual)
-              </div>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                className="w-full border rounded px-3 py-2"
-              >
-                <option value="SUCCEEDED">SUCCEEDED</option>
-                <option value="PROCESSING">PROCESSING</option>
-                <option value="FAILED">FAILED</option>
-              </select>
-              <Button
-                onClick={updateStatus}
-                disabled={loading}
-                variant="outline"
-              >
-                2) Update Payment Status
-              </Button>
+              {!payment.stripeClientSecret && (
+                <>
+                  <div className="text-sm font-medium text-gray-800">
+                    Test Mode (local development)
+                  </div>
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value)}
+                    className="w-full border rounded px-3 py-2"
+                    disabled={loading}
+                  >
+                    <option value="SUCCEEDED">SUCCEEDED</option>
+                    <option value="PROCESSING">PROCESSING</option>
+                    <option value="FAILED">FAILED</option>
+                  </select>
+                  <Button
+                    onClick={updateStatus}
+                    disabled={loading}
+                    variant="outline"
+                  >
+                    Confirm Test Payment
+                  </Button>
+                </>
+              )}
+
+              {isPaid && (
+                <div className="pt-2 border-t mt-3">
+                  <p className="text-sm text-green-700 mb-3">
+                    Payment complete. Continue to leave your review.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {initial.taskAssignmentId > 0 && (
+                      <Link
+                        href={`/reviews?taskAssignmentId=${initial.taskAssignmentId}&postId=${postId}`}
+                      >
+                        <Button className="bg-green-600 hover:bg-green-700 text-white">
+                          Leave Review
+                        </Button>
+                      </Link>
+                    )}
+                    <Link href="/profile">
+                      <Button variant="outline">Back to Profile</Button>
+                    </Link>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
