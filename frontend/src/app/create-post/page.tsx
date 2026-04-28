@@ -6,6 +6,10 @@ import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import { postsApi } from "@/lib/api";
 import {
+  parseDurationToMinutes,
+  formatMinutesAsDuration,
+} from "@/lib/duration";
+import {
   FaArrowLeft,
   FaMapMarkerAlt,
   FaClock,
@@ -85,7 +89,9 @@ export default function CreatePostPage() {
                 scheduled.getMinutes(),
               ).padStart(2, "0")}`
             : "",
-          duration: post.durationMinutes ? String(post.durationMinutes) : "",
+          duration: post.durationMinutes
+            ? formatMinutesAsDuration(post.durationMinutes)
+            : "",
           price: post.price ? String(post.price) : "",
         }));
       } catch (err: any) {
@@ -110,22 +116,75 @@ export default function CreatePostPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setLoading(true);
 
-    // Basic validation
-    if (!formData.title || !formData.description || !formData.category) {
-      setError("Please fill in all required fields");
-      setLoading(false);
+    // Required fields
+    const title = formData.title.trim();
+    const description = formData.description.trim();
+    if (!title || !description || !formData.category) {
+      setError("Please fill in title, description, and category.");
+      return;
+    }
+    if (title.length < 3 || title.length > 120) {
+      setError("Title must be between 3 and 120 characters.");
+      return;
+    }
+    if (description.length < 10 || description.length > 2000) {
+      setError("Description must be between 10 and 2000 characters.");
       return;
     }
 
-    try {
-      // Convert form data to API format
-      const scheduledTime =
-        formData.scheduledDate && formData.scheduledTime
-          ? `${formData.scheduledDate}T${formData.scheduledTime}:00`
-          : undefined;
+    // Duration: parse free-text into canonical minutes
+    let durationMinutes: number | undefined;
+    if (formData.duration.trim()) {
+      const parsed = parseDurationToMinutes(formData.duration);
+      if (!parsed) {
+        setError(
+          "Duration is not understood. Try e.g. \"2h\", \"90m\", \"1h 30m\", or \"2:30\".",
+        );
+        return;
+      }
+      durationMinutes = parsed.totalMinutes;
+    }
 
+    // Price
+    let price: number | undefined;
+    if (formData.price.trim()) {
+      const parsedPrice = Number(formData.price);
+      if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
+        setError("Price must be a positive number.");
+        return;
+      }
+      if (parsedPrice > 100000) {
+        setError("Price seems too high. Please double-check.");
+        return;
+      }
+      // Round to cents to avoid float drift before sending to backend
+      price = Math.round(parsedPrice * 100) / 100;
+    }
+
+    // Date must not be in the past (allow today)
+    let scheduledTime: string | undefined;
+    if (formData.scheduledDate && formData.scheduledTime) {
+      const dt = new Date(
+        `${formData.scheduledDate}T${formData.scheduledTime}:00`,
+      );
+      if (Number.isNaN(dt.getTime())) {
+        setError("Scheduled date/time is invalid.");
+        return;
+      }
+      // Allow up to 5 minutes of clock skew
+      if (dt.getTime() < Date.now() - 5 * 60 * 1000) {
+        setError("Scheduled time cannot be in the past.");
+        return;
+      }
+      scheduledTime = `${formData.scheduledDate}T${formData.scheduledTime}:00`;
+    } else if (formData.scheduledDate || formData.scheduledTime) {
+      setError("Please provide both date and time, or leave both empty.");
+      return;
+    }
+
+    setLoading(true);
+    try {
       const locationParts = [
         formData.address?.trim(),
         formData.city?.trim(),
@@ -138,8 +197,8 @@ export default function CreatePostPage() {
 
       const postData = {
         type: postType.toUpperCase() as "REQUEST" | "OFFER",
-        title: formData.title,
-        description: formData.description,
+        title,
+        description,
         category: formData.category as
           | "CLEANING"
           | "MOVING"
@@ -150,14 +209,10 @@ export default function CreatePostPage() {
           | "OTHER",
         locationName,
         scheduledTime,
-        durationMinutes: formData.duration
-          ? parseInt(formData.duration)
-          : undefined,
+        durationMinutes,
         paymentType: "FIXED" as const,
-        price: formData.price ? parseFloat(formData.price) : undefined,
+        price,
       };
-
-      console.log("Creating post:", postData);
 
       if (isEditMode) {
         await postsApi.updatePost(editId, postData);
@@ -436,9 +491,37 @@ export default function CreatePostPage() {
                   name="duration"
                   value={formData.duration}
                   onChange={handleInputChange}
-                  placeholder="e.g., 2 hours, 30 minutes"
+                  placeholder='e.g. "2h", "90m", "1h 30m", or "2:30"'
+                  inputMode="text"
+                  autoComplete="off"
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
+                {(() => {
+                  const trimmed = formData.duration.trim();
+                  if (!trimmed) {
+                    return (
+                      <p className="mt-1 text-xs text-gray-500">
+                        Use any of: <code>2h</code>, <code>90m</code>,{" "}
+                        <code>1h 30m</code>, <code>2:30</code>.
+                      </p>
+                    );
+                  }
+                  const parsed = parseDurationToMinutes(trimmed);
+                  if (parsed) {
+                    return (
+                      <p className="mt-1 text-xs text-green-600">
+                        Saved as <strong>{parsed.display}</strong> (
+                        {parsed.totalMinutes} minutes).
+                      </p>
+                    );
+                  }
+                  return (
+                    <p className="mt-1 text-xs text-red-600">
+                      Couldn&apos;t read that duration. Try <code>2h</code>,{" "}
+                      <code>90m</code>, or <code>1h 30m</code>.
+                    </p>
+                  );
+                })()}
               </div>
             </div>
           </div>

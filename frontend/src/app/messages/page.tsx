@@ -496,10 +496,10 @@ export default function MessagesPage() {
   }, [mergedMessages, conversationOf, user?.id]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white text-gray-900">
+    <div className="h-[100dvh] flex flex-col bg-gradient-to-br from-gray-50 to-white text-gray-900 overflow-hidden">
       <Navbar />
-      <main className="max-w-6xl mx-auto pt-20 px-2 sm:px-4 pb-4">
-        <div className="mb-4 px-2 flex items-center justify-between">
+      <main className="flex-1 min-h-0 flex flex-col w-full max-w-6xl mx-auto px-0 sm:px-4 pb-0 sm:pb-4">
+        <div className="hidden sm:flex mb-3 px-2 pt-3 items-center justify-between">
           <h1 className="text-2xl sm:text-3xl font-bold">Messages</h1>
           <Link
             href="/marketplace"
@@ -510,23 +510,23 @@ export default function MessagesPage() {
         </div>
 
         {error && (
-          <div className="mb-3 mx-2 bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">
+          <div className="mb-2 mx-2 bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">
             {error}
           </div>
         )}
         {conversationNotice && (
-          <div className="mb-3 mx-2 bg-blue-50 border border-blue-200 rounded-lg p-3 text-blue-700 text-sm">
+          <div className="mb-2 mx-2 bg-blue-50 border border-blue-200 rounded-lg p-3 text-blue-700 text-sm">
             {conversationNotice}
           </div>
         )}
 
-        <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-          <div className="grid grid-cols-1 md:grid-cols-[320px_1fr] h-[calc(100vh-200px)] min-h-[500px]">
+        <div className="flex-1 min-h-0 bg-white sm:border border-gray-200 sm:rounded-2xl sm:shadow-sm overflow-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-[320px_1fr] h-full">
             {/* Sidebar - one entry per person */}
             <aside
               className={`${
                 showSidebarOnMobile ? "flex" : "hidden"
-              } md:flex flex-col border-r border-gray-200 bg-gray-50/50`}
+              } md:flex flex-col min-h-0 border-r border-gray-200 bg-gray-50/50`}
             >
               <div className="p-3 border-b border-gray-200 bg-white">
                 <div className="relative">
@@ -649,7 +649,7 @@ export default function MessagesPage() {
             <section
               className={`${
                 showSidebarOnMobile ? "hidden" : "flex"
-              } md:flex flex-col bg-white`}
+              } md:flex flex-col min-h-0 bg-white`}
             >
               {!selectedGroup ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-gray-500">
@@ -799,63 +799,6 @@ export default function MessagesPage() {
 
                   {/* Composer */}
                   <div className="p-3 border-t border-gray-200 bg-white space-y-2">
-                    {/* Compose target picker (only when multiple convs exist) */}
-                    {selectedGroup.conversations.length > 1 && (
-                      <div className="relative">
-                        <button
-                          type="button"
-                          onClick={() => setShowTargetMenu((s) => !s)}
-                          className="inline-flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-800 bg-gray-100 hover:bg-gray-200 rounded-full px-2.5 py-1 transition-colors"
-                        >
-                          <span className="text-gray-500">Sending to:</span>
-                          <span className="font-medium text-gray-800 max-w-[220px] truncate">
-                            {composeTargetLabel}
-                          </span>
-                          <FaChevronDown className="text-[9px]" />
-                        </button>
-                        {showTargetMenu && (
-                          <div className="absolute bottom-full mb-2 left-0 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 min-w-[260px] max-h-64 overflow-y-auto">
-                            {selectedGroup.conversations.map((c) => {
-                              const isTask = c.type !== "DIRECT";
-                              const label = isTask
-                                ? taskLabelOf(c) ||
-                                  `Task #${c.taskAssignmentId}`
-                                : "Direct message";
-                              const active = composeTargetId === c.id;
-                              return (
-                                <button
-                                  key={c.id}
-                                  onClick={() => {
-                                    setComposeTargetId(c.id);
-                                    setShowTargetMenu(false);
-                                  }}
-                                  className={`w-full text-left px-3 py-2 text-sm flex items-start gap-2 hover:bg-gray-50 ${
-                                    active ? "bg-blue-50" : ""
-                                  }`}
-                                >
-                                  {isTask ? (
-                                    <FaTasks className="text-indigo-500 text-xs mt-0.5 flex-shrink-0" />
-                                  ) : (
-                                    <FaCommentDots className="text-gray-400 text-xs mt-0.5 flex-shrink-0" />
-                                  )}
-                                  <div className="flex-1 min-w-0">
-                                    <p className="truncate text-gray-800">
-                                      {label}
-                                    </p>
-                                    {c.taskAssignment?.status && (
-                                      <p className="text-[10px] text-gray-500">
-                                        {c.taskAssignment.status}
-                                      </p>
-                                    )}
-                                  </div>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
                     <div className="flex items-end gap-2">
                       <textarea
                         value={messageBody}

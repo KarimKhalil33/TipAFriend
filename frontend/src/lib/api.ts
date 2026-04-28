@@ -2,6 +2,27 @@
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
 
+// Refuse to talk to the backend over plain HTTP from a secure (HTTPS) page,
+// or in production builds. Mixed content is the #1 source of credential and
+// session-token leakage. Localhost is permitted because Next.js dev server
+// is HTTP by default.
+const isHttpsApi = API_BASE_URL.startsWith('https://');
+const isLocalhostApi = /^https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(API_BASE_URL);
+const isProduction = process.env.NODE_ENV === 'production';
+
+if (typeof window !== 'undefined') {
+  const pageIsHttps = window.location.protocol === 'https:';
+  if (!isHttpsApi && !isLocalhostApi) {
+    // Hard fail in prod; loud warning in dev.
+    const msg = `Refusing to use insecure API URL ${API_BASE_URL}. Set NEXT_PUBLIC_API_URL to an https:// origin.`;
+    if (isProduction || pageIsHttps) {
+      throw new Error(msg);
+    }
+    // eslint-disable-next-line no-console
+    console.warn('[security] ' + msg);
+  }
+}
+
 export class ApiError extends Error {
   code?: string;
   details?: unknown;
@@ -587,6 +608,43 @@ export const paymentsApi = {
 
   getPaymentByTask: async (taskAssignmentId: number): Promise<Payment> => {
     const response = await fetchWithAuth(`/payments/by-task/${taskAssignmentId}`);
+    return response.json();
+  },
+};
+
+// Stripe Connect (payouts) API — for users to onboard so they can receive money.
+export interface PayoutStatus {
+  hasAccount: boolean;
+  payoutsEnabled: boolean;
+  chargesEnabled: boolean;
+  detailsSubmitted: boolean;
+  requirementsDue?: string[];
+  disabledReason?: string | null;
+}
+
+export const stripeConnectApi = {
+  // Returns a one-time Stripe-hosted onboarding URL. Backend creates the
+  // Express account on first call and reuses it after.
+  createOnboardingLink: async (): Promise<{ url: string }> => {
+    const response = await fetchWithAuth('/payouts/onboarding-link', {
+      method: 'POST',
+    });
+    return response.json();
+  },
+
+  // Returns the current user's payout status. Frontend polls this after
+  // the user comes back from Stripe to know when payouts are enabled.
+  getStatus: async (): Promise<PayoutStatus> => {
+    const response = await fetchWithAuth('/payouts/status');
+    return response.json();
+  },
+
+  // Returns a one-time login link to the Express dashboard so users can
+  // see their payout history, update their bank, etc.
+  createDashboardLink: async (): Promise<{ url: string }> => {
+    const response = await fetchWithAuth('/payouts/dashboard-link', {
+      method: 'POST',
+    });
     return response.json();
   },
 };

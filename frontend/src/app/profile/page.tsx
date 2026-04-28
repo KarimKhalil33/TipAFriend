@@ -469,6 +469,27 @@ export default function ProfilePage() {
             </p>
           </div>
 
+          {/* Get Paid (Stripe Connect) entry point */}
+          <div className="max-w-lg mx-auto mb-6">
+            <Link
+              href="/payouts"
+              className="flex items-center justify-between gap-3 bg-white border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all rounded-2xl px-5 py-4"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-lg">
+                  $
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">Get Paid</p>
+                  <p className="text-xs text-gray-500">
+                    Set up payouts so people can pay you for completed tasks.
+                  </p>
+                </div>
+              </div>
+              <span className="text-blue-600 text-sm font-medium">Manage →</span>
+            </Link>
+          </div>
+
           {/* Tab Navigation */}
           <div className="bg-white rounded-2xl shadow-xl p-2 mb-8 max-w-lg mx-auto">
             <div className="flex">

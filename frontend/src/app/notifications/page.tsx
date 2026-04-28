@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
@@ -16,7 +16,8 @@ import {
   FaSyncAlt,
   FaBell,
 } from "react-icons/fa";
-import type { Notification } from "@/lib/api";
+import type { Notification, User } from "@/lib/api";
+import { usersApi } from "@/lib/api";
 import { useNotifications } from "@/contexts/NotificationsContext";
 
 const formatRelative = (iso?: string) => {
@@ -114,6 +115,50 @@ export default function NotificationsPage() {
     markAllAsRead,
   } = useNotifications();
   const [filter, setFilter] = useState<"all" | "unread">("all");
+  const [actorMap, setActorMap] = useState<Record<number, User>>({});
+
+  // Fetch any actor users we don't have cached yet
+  useEffect(() => {
+    const ids = Array.from(
+      new Set(
+        notifications
+          .map((n) => n.actorUserId)
+          .filter((id): id is number => !!id && !actorMap[id]),
+      ),
+    );
+    if (ids.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const results = await Promise.all(
+        ids.map(async (id) => {
+          try {
+            const u = await usersApi.getUser(id);
+            return [id, u] as const;
+          } catch {
+            return null;
+          }
+        }),
+      );
+      if (cancelled) return;
+      setActorMap((prev) => {
+        const next = { ...prev };
+        results.forEach((r) => {
+          if (r) next[r[0]] = r[1];
+        });
+        return next;
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [notifications, actorMap]);
+
+  const actorNameOf = (n: Notification): string | null => {
+    if (!n.actorUserId) return null;
+    const u = actorMap[n.actorUserId];
+    if (!u) return null;
+    return u.displayName || u.username || null;
+  };
 
   const filtered = useMemo(() => {
     let list = notifications;
@@ -154,7 +199,7 @@ export default function NotificationsPage() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white text-gray-900">
       <Navbar />
 
-      <main className="pt-20 px-4 max-w-3xl mx-auto pb-8">
+      <main className="px-4 max-w-3xl mx-auto pb-8 pt-4 sm:pt-6">
         {/* Header */}
         <div className="mb-6">
           <Link href="/marketplace">
@@ -260,6 +305,11 @@ export default function NotificationsPage() {
                   {group.items.map((n) => {
                     const { icon: Icon, color } = iconForType(n.type);
                     const url = actionUrlFor(n);
+                    const actorName = actorNameOf(n);
+                    const showActor =
+                      actorName &&
+                      !(n.title && n.title.includes(actorName)) &&
+                      !(n.message && n.message.includes(actorName));
                     return (
                       <div
                         key={n.id}
@@ -279,8 +329,18 @@ export default function NotificationsPage() {
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
-                              {n.title && (
+                              {showActor && (
+                                <p className="text-sm font-semibold text-gray-900">
+                                  {actorName}
+                                </p>
+                              )}
+                              {n.title && !showActor && (
                                 <p className="text-sm font-semibold text-gray-900 truncate">
+                                  {n.title}
+                                </p>
+                              )}
+                              {n.title && showActor && n.title !== actorName && (
+                                <p className="text-xs font-medium text-gray-600 truncate">
                                   {n.title}
                                 </p>
                               )}
