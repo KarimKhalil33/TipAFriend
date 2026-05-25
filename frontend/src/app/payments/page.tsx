@@ -92,7 +92,7 @@ export default function PaymentsPage() {
   const [postId, setPostId] = useState(initial.postId);
   const [payeeId, setPayeeId] = useState(initial.payeeId);
   const [amount, setAmount] = useState(initial.amount);
-  const [status, setStatus] = useState("SUCCEEDED");
+  const [status, setStatus] = useState("FAILED");
   const [payment, setPayment] = useState<Payment | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -135,10 +135,34 @@ export default function PaymentsPage() {
           initial.taskAssignmentId,
         );
         if (existing?.id) {
+          // Self-heal: if backend still says PROCESSING, ask it to
+          // reconcile with Stripe. The backend is the only one allowed
+          // to flip to SUCCEEDED.
+          if (existing.status !== "SUCCEEDED") {
+            try {
+              const synced = await paymentsApi.syncPayment(existing.id);
+              setPayment(synced);
+              if (synced.status === "SUCCEEDED") {
+                setSuccess("Payment confirmed.");
+              } else {
+                setSuccess(
+                  `Existing payment #${synced.id} loaded for this task.`,
+                );
+              }
+              return;
+            } catch {
+              // Sync failed (e.g. no PaymentIntent yet) — fall back to
+              // showing whatever the backend returned.
+            }
+          }
           setPayment(existing);
-          setSuccess(
-            `Existing payment #${existing.id} loaded for this task.`,
-          );
+          if (existing.status === "SUCCEEDED") {
+            setSuccess("Payment complete.");
+          } else {
+            setSuccess(
+              `Existing payment #${existing.id} loaded for this task.`,
+            );
+          }
         }
       } catch (err: any) {
         const typedError = err as ApiError;
@@ -226,9 +250,25 @@ export default function PaymentsPage() {
           </div>
         )}
 
-        {!canCreatePayment && !payment?.id && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-amber-800 mb-4 text-sm">
-            Payment details are missing. Please go back to Profile and click Pay from the completed post again.
+        {!hasPrefill && !payment?.id && !loading && (
+          <div className="bg-white border border-gray-200 rounded-xl p-6 text-center">
+            <h2 className="text-lg font-semibold text-gray-900 mb-1">
+              No active payment
+            </h2>
+            <p className="text-sm text-gray-600 mb-4">
+              To pay someone, open the completed task from your profile and
+              click <span className="font-medium">Pay</span>.
+            </p>
+            <div className="flex flex-wrap justify-center gap-2">
+              <Link href="/profile">
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                  Go to Profile
+                </Button>
+              </Link>
+              <Link href="/marketplace">
+                <Button variant="outline">Browse Marketplace</Button>
+              </Link>
+            </div>
           </div>
         )}
 
@@ -244,6 +284,7 @@ export default function PaymentsPage() {
           </div>
         )}
 
+        {(hasPrefill || payment?.id) && (
         <div className="bg-white border rounded-xl p-4 space-y-3">
           {!hasFullPrefill && (
             <>
@@ -309,8 +350,14 @@ export default function PaymentsPage() {
                 Status: {payment.status}
               </div>
 
-              {payment.stripeClientSecret &&
-              hasPublishableKey ? (
+              {isPaid ? (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-green-800 text-sm">
+                  <p className="font-medium">✓ Payment complete</p>
+                  <p className="mt-1">
+                    You&apos;ve already paid for this task. No further action needed.
+                  </p>
+                </div>
+              ) : payment.stripeClientSecret && hasPublishableKey ? (
                 <>
                   <div className="text-sm font-medium text-gray-800">
                     Step 2: Pay with Card
@@ -321,14 +368,26 @@ export default function PaymentsPage() {
                       paymentId={payment.id}
                       onError={setError}
                       onSuccess={async () => {
-                        const updated = await paymentsApi.updatePaymentStatus(
-                          payment.id,
-                          {
-                            status: "SUCCEEDED",
-                          },
-                        );
-                        setPayment(updated);
-                        setSuccess("Stripe payment confirmed.");
+                        // Stripe says the card was charged. Ask the
+                        // backend to reconcile with Stripe (only it can
+                        // mark SUCCEEDED). If the webhook beat us to it,
+                        // sync just returns the already-SUCCEEDED record.
+                        try {
+                          const synced = await paymentsApi.syncPayment(
+                            payment.id,
+                          );
+                          setPayment(synced);
+                          setSuccess(
+                            synced.status === "SUCCEEDED"
+                              ? "Stripe payment confirmed."
+                              : "Payment received — finalizing...",
+                          );
+                        } catch (err: any) {
+                          setError(
+                            err?.message ||
+                              "Card charged, but we couldn't confirm with the server. Refresh in a moment.",
+                          );
+                        }
                       }}
                     />
                   </Elements>
@@ -352,7 +411,7 @@ export default function PaymentsPage() {
                 </div>
               )}
 
-              {!payment.stripeClientSecret && (
+              {!isPaid && !payment.stripeClientSecret && (
                 <>
                   <div className="text-sm font-medium text-gray-800">
                     Test Mode (local development)
@@ -363,10 +422,14 @@ export default function PaymentsPage() {
                     className="w-full border rounded px-3 py-2"
                     disabled={loading}
                   >
-                    <option value="SUCCEEDED">SUCCEEDED</option>
-                    <option value="PROCESSING">PROCESSING</option>
                     <option value="FAILED">FAILED</option>
+                    <option value="PROCESSING">PROCESSING</option>
                   </select>
+                  <p className="text-xs text-gray-500">
+                    SUCCEEDED can only be set by the Stripe webhook. Use a
+                    Stripe test card (e.g. 4242 4242 4242 4242) above to
+                    actually complete payment.
+                  </p>
                   <Button
                     onClick={updateStatus}
                     disabled={loading}
@@ -401,6 +464,7 @@ export default function PaymentsPage() {
             </div>
           )}
         </div>
+        )}
       </main>
     </div>
   );

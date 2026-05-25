@@ -606,6 +606,17 @@ export const paymentsApi = {
     return response.json();
   },
 
+  // Ask the backend to reconcile a payment's status with Stripe directly.
+  // Use this when the client has just confirmed a card with Stripe (or a
+  // stale PROCESSING record needs to be flipped to SUCCEEDED). The backend
+  // is the only one allowed to set SUCCEEDED.
+  syncPayment: async (paymentId: number): Promise<Payment> => {
+    const response = await fetchWithAuth(`/payments/${paymentId}/sync`, {
+      method: 'POST',
+    });
+    return response.json();
+  },
+
   getPaymentByTask: async (taskAssignmentId: number): Promise<Payment> => {
     const response = await fetchWithAuth(`/payments/by-task/${taskAssignmentId}`);
     return response.json();
@@ -634,8 +645,12 @@ export const stripeConnectApi = {
 
   // Returns the current user's payout status. Frontend polls this after
   // the user comes back from Stripe to know when payouts are enabled.
+  // `cache: 'no-store'` prevents the browser/Next from serving a stale
+  // "not set up" response right after onboarding completes.
   getStatus: async (): Promise<PayoutStatus> => {
-    const response = await fetchWithAuth('/payouts/status');
+    const response = await fetchWithAuth('/payouts/status', {
+      cache: 'no-store',
+    });
     return response.json();
   },
 

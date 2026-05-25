@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
@@ -13,6 +13,8 @@ import {
   User,
   FriendRequest,
   tasksApi,
+  paymentsApi,
+  ApiError,
 } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import {
@@ -43,6 +45,12 @@ export default function ProfilePage() {
   >("my-posts");
   const [myPosts, setMyPosts] = useState<Post[]>([]);
   const [acceptedPosts, setAcceptedPosts] = useState<Post[]>([]);
+  // Map of taskAssignmentId -> payment status string (e.g. "SUCCEEDED").
+  // Used to hide the Pay button once a payment is complete and prevent
+  // double-paying. Populated lazily as completed posts are loaded.
+  const [paymentStatusByTask, setPaymentStatusByTask] = useState<
+    Record<number, string>
+  >({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -148,6 +156,53 @@ export default function ProfilePage() {
 
     preloadStats();
   }, [isAuthenticated]);
+
+  // Whenever myPosts changes, fetch payment status for any COMPLETED post
+  // that has a taskAssignmentId we haven't checked yet. This drives whether
+  // the Pay button is shown. We track already-checked IDs in a ref so the
+  // effect doesn't infinite-loop on its own state updates (and so React
+  // dev-mode double-mount doesn't refire the requests).
+  const checkedTaskIdsRef = useRef<Set<number>>(new Set());
+  useEffect(() => {
+    const completedTaskIds = myPosts
+      .filter((p) => p.status === "COMPLETED")
+      .map((p) => Number((p as any).taskAssignmentId || 0))
+      .filter((id) => id > 0 && !checkedTaskIdsRef.current.has(id));
+
+    if (completedTaskIds.length === 0) return;
+    for (const id of completedTaskIds) checkedTaskIdsRef.current.add(id);
+
+    let cancelled = false;
+    (async () => {
+      const entries: Array<[number, string]> = [];
+      await Promise.all(
+        completedTaskIds.map(async (taskId) => {
+          try {
+            const payment = await paymentsApi.getPaymentByTask(taskId);
+            entries.push([taskId, payment?.status || "NONE"]);
+          } catch (err: any) {
+            const e = err as ApiError;
+            if (e.code === "PAYMENT_NOT_FOUND" || e.status === 404) {
+              entries.push([taskId, "NONE"]);
+            } else {
+              // Transient error — allow a retry on next load.
+              checkedTaskIdsRef.current.delete(taskId);
+            }
+          }
+        }),
+      );
+      if (cancelled || entries.length === 0) return;
+      setPaymentStatusByTask((prev) => {
+        const next = { ...prev };
+        for (const [taskId, status] of entries) next[taskId] = status;
+        return next;
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [myPosts]);
 
   const loadMyPosts = useCallback(async () => {
     try {
@@ -309,6 +364,27 @@ export default function ProfilePage() {
       return;
     }
 
+    // Defensive: re-check payment status right before navigating, so a
+    // stale Pay button (e.g. tab left open across a payment) can't be
+    // used to trigger a second payment attempt.
+    try {
+      const existing = await paymentsApi.getPaymentByTask(taskAssignmentId);
+      if (existing?.status === "SUCCEEDED") {
+        setPaymentStatusByTask((prev) => ({
+          ...prev,
+          [taskAssignmentId]: "SUCCEEDED",
+        }));
+        setError("This task has already been paid. Leave a review instead.");
+        return;
+      }
+    } catch (err: any) {
+      const e = err as ApiError;
+      // 404/PAYMENT_NOT_FOUND just means no payment yet — carry on.
+      if (e.code !== "PAYMENT_NOT_FOUND" && e.status !== 404) {
+        // Don't block on transient errors; just proceed.
+      }
+    }
+
     const query = new URLSearchParams({
       postId: String(post.id),
       payeeId: String(payeeId),
@@ -378,11 +454,16 @@ export default function ProfilePage() {
     ["ACCEPTED", "OPEN"].includes(post.status);
   const canMarkComplete = (post: Post) =>
     ["ACCEPTED", "IN_PROGRESS"].includes(post.status);
-  const canPay = (post: Post) =>
-    post.status === "COMPLETED" &&
-    !!post.price &&
-    Number((post as any).taskAssignmentId || 0) > 0 &&
-    Number((post as any).accepterId || 0) > 0;
+  const canPay = (post: Post) => {
+    const taskId = Number((post as any).taskAssignmentId || 0);
+    if (post.status !== "COMPLETED") return false;
+    if (!post.price) return false;
+    if (!taskId) return false;
+    if (Number((post as any).accepterId || 0) <= 0) return false;
+    // Hide once paid.
+    if (paymentStatusByTask[taskId] === "SUCCEEDED") return false;
+    return true;
+  };
   const canReview = (post: Post) =>
     post.status === "COMPLETED" &&
     Number((post as any).taskAssignmentId || 0) > 0;
