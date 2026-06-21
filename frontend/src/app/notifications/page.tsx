@@ -53,15 +53,12 @@ const iconForType = (type: string | undefined) => {
   switch (type?.toLowerCase()) {
     case "friend_request":
     case "friend_request_received":
-      return { icon: FaUserPlus, color: "bg-blue-100 text-blue-600" };
+      return { icon: FaUserPlus, color: "bg-indigo-100 text-indigo-600" };
     case "post_liked":
       return { icon: FaHeart, color: "bg-rose-100 text-rose-600" };
     case "new_post":
     case "post_created":
-      return {
-        icon: FaExclamationCircle,
-        color: "bg-emerald-100 text-emerald-600",
-      };
+      return { icon: FaExclamationCircle, color: "bg-emerald-100 text-emerald-600" };
     case "message":
     case "new_message":
       return { icon: FaComment, color: "bg-purple-100 text-purple-600" };
@@ -75,22 +72,18 @@ const iconForType = (type: string | undefined) => {
     case "task_in_progress":
       return { icon: FaCheck, color: "bg-blue-100 text-blue-600" };
     default:
-      return { icon: FaBell, color: "bg-gray-100 text-gray-600" };
+      return { icon: FaBell, color: "bg-gray-100 text-gray-500" };
   }
 };
 
 const actionUrlFor = (notification: Notification): string => {
   const type = notification.type?.toLowerCase() || "";
-
   if (notification.conversationId || type.includes("message")) {
     const params = new URLSearchParams();
-    if (notification.conversationId)
-      params.set("conversationId", String(notification.conversationId));
-    if (notification.actorUserId)
-      params.set("userId", String(notification.actorUserId));
+    if (notification.conversationId) params.set("conversationId", String(notification.conversationId));
+    if (notification.actorUserId) params.set("userId", String(notification.actorUserId));
     if (notification.postId) params.set("postId", String(notification.postId));
-    if (notification.taskAssignmentId)
-      params.set("taskAssignmentId", String(notification.taskAssignmentId));
+    if (notification.taskAssignmentId) params.set("taskAssignmentId", String(notification.taskAssignmentId));
     return params.toString() ? `/messages?${params.toString()}` : "/messages";
   }
   if (type.includes("friend")) return "/profile";
@@ -105,19 +98,11 @@ export default function NotificationsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const postIdFilter = Number(searchParams.get("postId") || "0");
-  const {
-    notifications,
-    unreadCount,
-    loading,
-    error,
-    refresh,
-    markAsRead,
-    markAllAsRead,
-  } = useNotifications();
+  const { notifications, unreadCount, loading, error, refresh, markAsRead, markAllAsRead } =
+    useNotifications();
   const [filter, setFilter] = useState<"all" | "unread">("all");
   const [actorMap, setActorMap] = useState<Record<number, User>>({});
 
-  // Fetch any actor users we don't have cached yet
   useEffect(() => {
     const ids = Array.from(
       new Set(
@@ -134,23 +119,17 @@ export default function NotificationsPage() {
           try {
             const u = await usersApi.getUser(id);
             return [id, u] as const;
-          } catch {
-            return null;
-          }
+          } catch { return null; }
         }),
       );
       if (cancelled) return;
       setActorMap((prev) => {
         const next = { ...prev };
-        results.forEach((r) => {
-          if (r) next[r[0]] = r[1];
-        });
+        results.forEach((r) => { if (r) next[r[0]] = r[1]; });
         return next;
       });
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [notifications, actorMap]);
 
   const actorNameOf = (n: Notification): string | null => {
@@ -169,9 +148,7 @@ export default function NotificationsPage() {
           String(n.message || "").includes(`#${postIdFilter}`),
       );
     }
-    if (filter === "unread") {
-      list = list.filter((n) => !n.read);
-    }
+    if (filter === "unread") list = list.filter((n) => !n.read);
     return list;
   }, [notifications, filter, postIdFilter]);
 
@@ -180,11 +157,8 @@ export default function NotificationsPage() {
     filtered.forEach((n) => {
       const day = dayLabel(n.createdAt);
       const last = groups[groups.length - 1];
-      if (last && last.day === day) {
-        last.items.push(n);
-      } else {
-        groups.push({ day, items: [n] });
-      }
+      if (last && last.day === day) { last.items.push(n); }
+      else { groups.push({ day, items: [n] }); }
     });
     return groups;
   }, [filtered]);
@@ -196,37 +170,40 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white text-gray-900">
+    <div className="min-h-screen bg-gray-50 text-gray-900">
       <Navbar />
 
-      <main className="px-4 max-w-3xl mx-auto pb-8 pt-4 sm:pt-6">
-        {/* Header */}
-        <div className="mb-6">
+      {/* Compact dark header */}
+      <div className="bg-[#090D21] pt-20 pb-16 px-8 relative overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-0 right-20 w-64 h-64 bg-indigo-600 rounded-full opacity-10 blur-3xl" />
+          <div className="absolute bottom-0 left-10 w-64 h-64 bg-purple-600 rounded-full opacity-10 blur-3xl" />
+        </div>
+        <div className="max-w-3xl mx-auto relative z-10">
           <Link href="/marketplace">
-            <div className="flex items-center gap-2 text-gray-600 hover:text-gray-800 mb-3 transition-colors cursor-pointer text-sm">
-              <FaArrowLeft />
-              <span>Back to Marketplace</span>
-            </div>
+            <span className="flex items-center gap-2 text-gray-400 hover:text-white mb-4 transition-colors text-sm cursor-pointer w-fit">
+              <FaArrowLeft className="text-xs" />
+              Back to Marketplace
+            </span>
           </Link>
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+              <h1 className="text-4xl font-extrabold text-white flex items-center gap-3">
                 Notifications
                 {unreadCount > 0 && (
-                  <span className="bg-blue-500 text-white text-sm font-semibold rounded-full px-3 py-0.5">
+                  <span className="bg-indigo-500 text-white text-sm font-semibold rounded-full px-3 py-0.5">
                     {unreadCount}
                   </span>
                 )}
               </h1>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-gray-300 text-sm mt-1">
                 Stay updated on tasks, messages, and friends.
               </p>
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => refresh()}
-                className="inline-flex items-center gap-2 text-sm px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
-                title="Refresh"
+                className="flex items-center gap-2 text-sm px-4 py-2.5 rounded-xl border border-white/20 text-gray-300 hover:bg-white/10 transition-all"
               >
                 <FaSyncAlt className="text-xs" />
                 Refresh
@@ -234,7 +211,7 @@ export default function NotificationsPage() {
               <button
                 onClick={markAllAsRead}
                 disabled={unreadCount === 0}
-                className="inline-flex items-center gap-2 text-sm px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 text-sm px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold shadow-md hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
                 <FaCheckDouble className="text-xs" />
                 Mark all read
@@ -242,66 +219,70 @@ export default function NotificationsPage() {
             </div>
           </div>
         </div>
+      </div>
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm mb-4">
-            {error}
-          </div>
-        )}
+      <main className="px-4 max-w-3xl mx-auto pb-12 -mt-6 relative z-10">
 
-        {/* Tabs */}
-        <div className="mb-5 flex bg-white rounded-xl border border-gray-200 p-1 w-fit shadow-sm">
+        {/* Filter tabs */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-1.5 mb-5 flex gap-1 w-fit">
           <button
             onClick={() => setFilter("all")}
-            className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
               filter === "all"
-                ? "bg-gray-900 text-white"
-                : "text-gray-600 hover:text-gray-900"
+                ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-sm"
+                : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
             }`}
           >
             All
           </button>
           <button
             onClick={() => setFilter("unread")}
-            className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${
               filter === "unread"
-                ? "bg-gray-900 text-white"
-                : "text-gray-600 hover:text-gray-900"
+                ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-sm"
+                : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
             }`}
           >
             Unread {unreadCount > 0 && `(${unreadCount})`}
           </button>
         </div>
 
-        {/* List */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-2xl px-4 py-3 text-red-600 text-sm mb-5">
+            {error}
+          </div>
+        )}
+
+        {/* Notification list */}
         {loading && notifications.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            Loading notifications...
+          <div className="flex justify-center items-center py-24">
+            <div className="flex items-center gap-3 text-gray-400">
+              <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+              <span className="text-sm">Loading notifications...</span>
+            </div>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-16 bg-white border border-gray-200 rounded-2xl">
-            <div className="w-16 h-16 mx-auto rounded-full bg-gray-100 flex items-center justify-center text-gray-400 mb-3">
+          <div className="text-center py-24 bg-white rounded-2xl border border-gray-100 shadow-sm">
+            <div className="w-16 h-16 mx-auto rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-300 mb-4">
               <FaBell className="text-2xl" />
             </div>
             <h3 className="text-lg font-semibold text-gray-700">
-              {filter === "unread"
-                ? "You're all caught up"
-                : "No notifications yet"}
+              {filter === "unread" ? "You're all caught up" : "No notifications yet"}
             </h3>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-gray-400 mt-1">
               {filter === "unread"
                 ? "Check back later for new updates."
                 : "We'll let you know when something happens."}
             </p>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-5">
             {grouped.map((group) => (
               <div key={group.day}>
-                <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 px-1">
+                <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-1">
                   {group.day}
                 </h2>
-                <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden divide-y divide-gray-100 shadow-sm">
+                <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden divide-y divide-gray-50 shadow-sm">
                   {group.items.map((n) => {
                     const { icon: Icon, color } = iconForType(n.type);
                     const url = actionUrlFor(n);
@@ -310,66 +291,55 @@ export default function NotificationsPage() {
                       actorName &&
                       !(n.title && n.title.includes(actorName)) &&
                       !(n.message && n.message.includes(actorName));
+
                     return (
                       <div
                         key={n.id}
-                        className={`flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors ${
-                          !n.read ? "bg-blue-50/40" : ""
+                        className={`flex items-start gap-4 px-5 py-4 hover:bg-gray-50 transition-colors ${
+                          !n.read ? "bg-indigo-50/50" : ""
                         }`}
                       >
-                        <div
-                          className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${color}`}
-                        >
+                        {/* Icon */}
+                        <div className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${color}`}>
                           <Icon className="text-base" />
                         </div>
+
+                        {/* Content */}
                         <button
                           onClick={() => handleClick(n)}
-                          className="flex-1 min-w-0 text-left cursor-pointer"
+                          className="flex-1 min-w-0 text-left"
                           disabled={!url && n.read}
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
                               {showActor && (
-                                <p className="text-sm font-semibold text-gray-900">
-                                  {actorName}
-                                </p>
+                                <p className="text-sm font-semibold text-gray-900">{actorName}</p>
                               )}
                               {n.title && !showActor && (
-                                <p className="text-sm font-semibold text-gray-900 truncate">
-                                  {n.title}
-                                </p>
+                                <p className="text-sm font-semibold text-gray-900 truncate">{n.title}</p>
                               )}
                               {n.title && showActor && n.title !== actorName && (
-                                <p className="text-xs font-medium text-gray-600 truncate">
-                                  {n.title}
-                                </p>
+                                <p className="text-xs font-medium text-gray-600 truncate">{n.title}</p>
                               )}
-                              <p
-                                className={`text-sm ${
-                                  !n.read ? "text-gray-900" : "text-gray-600"
-                                }`}
-                              >
+                              <p className={`text-sm leading-relaxed ${!n.read ? "text-gray-800" : "text-gray-500"}`}>
                                 {n.message}
                               </p>
-                              <p className="text-xs text-gray-400 mt-0.5">
-                                {formatRelative(n.createdAt)}
-                              </p>
+                              <p className="text-xs text-gray-400 mt-1">{formatRelative(n.createdAt)}</p>
                             </div>
                             {!n.read && (
-                              <span className="flex-shrink-0 mt-1 w-2.5 h-2.5 rounded-full bg-blue-500" />
+                              <span className="flex-shrink-0 mt-1.5 w-2 h-2 rounded-full bg-indigo-500" />
                             )}
                           </div>
                         </button>
+
+                        {/* Mark read button */}
                         {!n.read && (
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              markAsRead(n.id);
-                            }}
-                            className="flex-shrink-0 text-xs text-gray-500 hover:text-blue-600 transition-colors"
+                            onClick={(e) => { e.stopPropagation(); markAsRead(n.id); }}
+                            className="flex-shrink-0 p-2 text-gray-300 hover:text-indigo-500 hover:bg-indigo-50 rounded-lg transition-all"
                             title="Mark as read"
                           >
-                            <FaCheck />
+                            <FaCheck className="text-xs" />
                           </button>
                         )}
                       </div>
