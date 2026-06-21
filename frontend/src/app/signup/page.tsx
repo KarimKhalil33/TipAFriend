@@ -1,12 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  FaFacebookF,
-  FaLinkedinIn,
-  FaGoogle,
-  FaRegEnvelope,
-} from "react-icons/fa";
+import { FaRegEnvelope, FaUser } from "react-icons/fa";
 import { MdLockOutline } from "react-icons/md";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -41,157 +36,185 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-gray-50 to-white text-gray-900">
-      {/* Background Wave Pattern */}
-      <div className="absolute inset-0 z-0">
-        <svg
-          className="absolute top-0 left-0 w-full h-full opacity-15"
-          viewBox="0 0 1000 1000"
-          xmlns="http://www.w3.org/2000/svg"
-          preserveAspectRatio="none"
-        >
-          <path
-            d="M0,300 Q250,200 500,300 T1000,300 L1000,0 L0,0 Z"
-            fill="currentColor"
-            className="text-gray-300"
-          />
-          <path
-            d="M0,500 Q250,400 500,500 T1000,500 L1000,300 Q750,400 500,300 T0,300 Z"
-            fill="currentColor"
-            className="text-gray-400"
-          />
-          <path
-            d="M0,700 Q250,600 500,700 T1000,700 L1000,500 Q750,600 500,500 T0,500 Z"
-            fill="currentColor"
-            className="text-gray-500"
-          />
-        </svg>
-        <svg
-          className="absolute bottom-0 left-0 w-full h-full opacity-15"
-          viewBox="0 0 1000 1000"
-          xmlns="http://www.w3.org/2000/svg"
-          preserveAspectRatio="none"
-        >
-          <path
-            d="M0,1000 Q250,900 500,1000 T1000,1000 L1000,800 Q750,700 500,800 T0,800 Z"
-            fill="currentColor"
-            className="text-gray-400"
-          />
-        </svg>
+    <div className="fixed inset-0 bg-[#090D21] flex flex-col">
+      {/* Glow orbs */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-20 right-10 w-80 h-80 bg-purple-600 rounded-full opacity-10 blur-3xl" />
+        <div className="absolute bottom-20 left-10 w-96 h-96 bg-indigo-600 rounded-full opacity-10 blur-3xl" />
       </div>
+
       <Navbar />
-      <div className="absolute inset-0 flex items-center justify-center z-10 overflow-y-auto pt-20">
-        <div
-          className="rounded-2xl shadow-2xl flex w-full max-w-4xl mx-4 my-8"
-          style={{ backgroundColor: "rgb(9, 13, 33)" }}
-        >
-          <div className="w-3/5 p-8 text-white">
-            <div className="py-10">
-              <h2 className="text-4xl font-bold mb-2 text-center">
-                Create an Account
-              </h2>
-              <div className="border-2 w-20 border-blue-400 block mb-2 mx-auto"></div>
-              <div className="flex justify-center my-2">
-                <a
-                  href="#"
-                  className="border-2 border-gray-700 rounded-full p-3 mx-1 hover:text-blue-700"
-                >
-                  <FaFacebookF className="text-sm" />
-                </a>
-                <a
-                  href="#"
-                  className="border-2 border-gray-700 rounded-full p-3 mx-1 hover:text-blue-700"
-                >
-                  <FaLinkedinIn className="text-sm" />
-                </a>
-                <a
-                  href="#"
-                  className="border-2 border-gray-700 rounded-full p-3 mx-1 hover:text-blue-700"
-                >
-                  <FaGoogle className="text-sm" />
-                </a>
+
+      <div className="flex-1 flex items-center justify-center px-6 py-8 relative z-10 overflow-y-auto">
+        <div className="w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden flex my-4">
+          {/* Left: Form */}
+          <div className="w-full lg:w-7/12 bg-white p-10 lg:p-14 flex flex-col justify-center">
+            <h2 className="text-3xl font-bold text-gray-900 mb-1">
+              Create account
+            </h2>
+            <p className="text-gray-500 mb-8 text-sm">
+              Join your friends and start posting tasks today
+            </p>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Username
+                  </label>
+                  <div className="relative">
+                    <FaUser className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
+                    <input
+                      type="text"
+                      name="username"
+                      placeholder="your_username"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 bg-gray-50 text-sm"
+                      required
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                    Display Name
+                  </label>
+                  <div className="relative">
+                    <FaUser className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
+                    <input
+                      type="text"
+                      name="displayName"
+                      placeholder="Your Name"
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 bg-gray-50 text-sm"
+                      required
+                    />
+                  </div>
+                </div>
               </div>
-              <p className="text-gray-400 my-3 text-center">
-                or use your email for registration
-              </p>
-              <form
-                onSubmit={handleSubmit}
-                className="flex flex-col items-center space-y-6"
-              >
-                <div className="bg-gray-900 w-full max-w-md p-4 flex items-center rounded-md shadow-md">
-                  <FaRegEnvelope className="text-gray-400 mr-3" />
-                  <input
-                    type="text"
-                    name="username"
-                    placeholder="Username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="bg-gray-900 text-white outline-none flex-1"
-                    required
-                  />
-                </div>
-                <div className="bg-gray-900 w-full max-w-md p-4 flex items-center rounded-md shadow-md">
-                  <FaRegEnvelope className="text-gray-400 mr-3" />
-                  <input
-                    type="text"
-                    name="displayName"
-                    placeholder="Display Name"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    className="bg-gray-900 text-white outline-none flex-1"
-                    required
-                  />
-                </div>
-                <div className="bg-gray-900 w-full max-w-md p-4 flex items-center rounded-md shadow-md">
-                  <FaRegEnvelope className="text-gray-400 mr-3" />
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Email
+                </label>
+                <div className="relative">
+                  <FaRegEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
                   <input
                     type="email"
                     name="email"
-                    placeholder="Email"
+                    placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="bg-gray-900 text-white outline-none flex-1"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 bg-gray-50"
                     required
                   />
                 </div>
-                <div className="bg-gray-900 w-full max-w-md p-4 flex items-center rounded-md shadow-md">
-                  <MdLockOutline className="text-gray-400 mr-3" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Password
+                </label>
+                <div className="relative">
+                  <MdLockOutline className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-base" />
                   <input
                     type="password"
                     name="password"
-                    placeholder="Password"
+                    placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="bg-gray-900 text-white outline-none flex-1"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 bg-gray-50"
                     required
                     minLength={6}
                   />
                 </div>
-                {error && <p className="text-red-500">{error}</p>}
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full max-w-md text-white font-bold py-4 px-8 rounded-md transition duration-300 ease-in-out transform hover:scale-105 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ backgroundColor: "rgb(9, 13, 33)" }}
-                >
-                  {loading ? "Creating Account..." : "Sign Up"}
-                </Button>
-              </form>
-            </div>
-          </div>
-          <div className="w-2/5 bg-gray-50 text-gray-800 rounded-tr-2xl rounded-br-2xl py-36 px-12">
-            <h2 className="text-3xl font-bold mb-2">
-              Already have an account?
-            </h2>
-            <div className="border-2 w-10 border-gray-800 inline-block mb-2"></div>
-            <p className="mb-10">
-              Sign in to access your account and start your journey with us.
-            </p>
-            <Link href="/login">
-              <Button className="border-2 border-gray-800 rounded-full px-12 py-2 inline-block font-semibold hover:bg-gray-800 hover:text-white">
-                Sign In
+              </div>
+
+              {error && (
+                <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+                  <p className="text-red-600 text-sm">{error}</p>
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold py-3 rounded-xl text-base shadow-lg transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 mt-2"
+              >
+                {loading ? "Creating Account..." : "Create Account"}
               </Button>
-            </Link>
+            </form>
+
+            <p className="mt-6 text-center text-sm text-gray-500 lg:hidden">
+              Already have an account?{" "}
+              <Link href="/login">
+                <span className="text-indigo-600 font-semibold hover:underline cursor-pointer">
+                  Sign in
+                </span>
+              </Link>
+            </p>
+          </div>
+
+          {/* Right: Branding */}
+          <div className="hidden lg:flex lg:w-5/12 bg-gradient-to-br from-indigo-600 to-purple-700 p-12 flex-col justify-between relative overflow-hidden">
+            <div className="absolute inset-0 pointer-events-none">
+              <div className="absolute -top-10 -right-10 w-40 h-40 bg-white rounded-full opacity-5" />
+              <div className="absolute -bottom-10 -left-10 w-60 h-60 bg-white rounded-full opacity-5" />
+            </div>
+            <div className="relative z-10">
+              <Link href="/landing">
+                <span className="text-2xl font-bold text-white tracking-wide cursor-pointer">
+                  TAF
+                </span>
+              </Link>
+            </div>
+            <div className="relative z-10">
+              <h2 className="text-4xl font-extrabold text-white mb-4 leading-tight">
+                Start earning
+                <br />
+                today.
+              </h2>
+              <p className="text-indigo-200 text-base leading-relaxed mb-6">
+                Join your friends, post tasks you need done, and earn money by
+                helping out.
+              </p>
+              <div className="space-y-3">
+                {[
+                  "Free to join",
+                  "Friends-only network",
+                  "Secure payments",
+                ].map((item) => (
+                  <div
+                    key={item}
+                    className="flex items-center gap-3 text-indigo-100 text-sm"
+                  >
+                    <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                      <svg
+                        className="w-3 h-3 text-white"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </div>
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="relative z-10 text-indigo-200 text-sm">
+              Already have an account?{" "}
+              <Link href="/login">
+                <span className="text-white font-semibold underline underline-offset-2 hover:text-indigo-100 cursor-pointer">
+                  Sign in
+                </span>
+              </Link>
+            </div>
           </div>
         </div>
       </div>

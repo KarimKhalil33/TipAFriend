@@ -24,7 +24,7 @@ export default function LoginPage() {
 
     try {
       await login(username, password);
-      router.push("/marketplace"); // Redirect to the marketplace
+      router.push("/marketplace");
     } catch (error: any) {
       console.error("Login error:", error);
       setError(error.message || "An unexpected error occurred");
@@ -34,103 +34,118 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-gray-50 to-white text-gray-900">
-      {/* Background Wave Pattern */}
-      <div className="absolute inset-0 z-0">
-        <svg
-          className="absolute top-0 left-0 w-full h-full opacity-15"
-          viewBox="0 0 1000 1000"
-          xmlns="http://www.w3.org/2000/svg"
-          preserveAspectRatio="none"
-        >
-          <path
-            d="M0,300 Q250,200 500,300 T1000,300 L1000,0 L0,0 Z"
-            fill="currentColor"
-            className="text-gray-300"
-          />
-          <path
-            d="M0,500 Q250,400 500,500 T1000,500 L1000,300 Q750,400 500,300 T0,300 Z"
-            fill="currentColor"
-            className="text-gray-400"
-          />
-          <path
-            d="M0,700 Q250,600 500,700 T1000,700 L1000,500 Q750,600 500,500 T0,500 Z"
-            fill="currentColor"
-            className="text-gray-500"
-          />
-        </svg>
-        <svg
-          className="absolute bottom-0 left-0 w-full h-full opacity-15"
-          viewBox="0 0 1000 1000"
-          xmlns="http://www.w3.org/2000/svg"
-          preserveAspectRatio="none"
-        >
-          <path
-            d="M0,1000 Q250,900 500,1000 T1000,1000 L1000,800 Q750,700 500,800 T0,800 Z"
-            fill="currentColor"
-            className="text-gray-400"
-          />
-        </svg>
+    <div className="fixed inset-0 bg-[#090D21] flex flex-col">
+      {/* Glow orbs */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-20 left-10 w-80 h-80 bg-indigo-600 rounded-full opacity-10 blur-3xl" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-600 rounded-full opacity-10 blur-3xl" />
       </div>
-      <Navbar />
-      <div className="absolute inset-0 flex items-center justify-center z-10 overflow-y-auto pt-20">
-        <div className="rounded-2xl shadow-2xl w-full max-w-4xl mx-4 my-8 overflow-hidden bg-white">
-          {/* Blue Header Section */}
-          <div
-            className="p-8 text-center"
-            style={{ backgroundColor: "rgb(9, 13, 33)" }}
-          >
-            <h2 className="text-4xl font-bold mb-2 text-white">Login</h2>
-            <div className="border-2 w-20 border-blue-400 block mb-2 mx-auto"></div>
-            <p className="text-gray-300 my-3">Use your email account</p>
-          </div>
 
-          {/* White Form Section */}
-          <div className="p-8 bg-white">
-            <form
-              onSubmit={handleSubmit}
-              className="flex flex-col items-center space-y-6"
-            >
-              <div className="bg-gray-900 w-full max-w-md p-4 flex items-center rounded-md shadow-md">
-                <FaRegEnvelope className="text-gray-400 mr-3" />
-                <input
-                  type="text"
-                  name="username"
-                  placeholder="Username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="bg-gray-900 text-white outline-none flex-1"
-                  required
-                />
-              </div>
-              <div className="bg-gray-900 w-full max-w-md p-4 flex items-center rounded-md shadow-md">
-                <MdLockOutline className="text-gray-400 mr-3" />
-                <input
-                  type="password"
-                  name="password"
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="bg-gray-900 text-white outline-none flex-1"
-                />
-              </div>
-              {error && <p className="text-red-500">{error}</p>}
-              <Button
-                type="submit"
-                disabled={loading}
-                className="w-full max-w-md text-white font-bold py-4 px-8 rounded-md transition duration-300 ease-in-out transform hover:scale-105 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ backgroundColor: "rgb(9, 13, 33)" }}
-              >
-                {loading ? "Signing in..." : "Login"}
-              </Button>
-            </form>
-            <div className="mt-6 text-center">
-              <Link href="/signup">
-                <span className="text-blue-600 hover:underline cursor-pointer">
-                  Don't have an account? Sign Up
+      <Navbar />
+
+      <div className="flex-1 flex items-center justify-center px-6 py-8 relative z-10">
+        <div className="w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden flex">
+          {/* Left: Branding */}
+          <div className="hidden lg:flex lg:w-5/12 bg-gradient-to-br from-indigo-600 to-purple-700 p-12 flex-col justify-between relative overflow-hidden">
+            <div className="absolute inset-0 pointer-events-none">
+              <div className="absolute -top-10 -left-10 w-40 h-40 bg-white rounded-full opacity-5" />
+              <div className="absolute -bottom-10 -right-10 w-60 h-60 bg-white rounded-full opacity-5" />
+            </div>
+            <div className="relative z-10">
+              <Link href="/landing">
+                <span className="text-2xl font-bold text-white tracking-wide cursor-pointer">
+                  TAF
                 </span>
               </Link>
             </div>
+            <div className="relative z-10">
+              <h2 className="text-4xl font-extrabold text-white mb-4 leading-tight">
+                Welcome
+                <br />
+                back.
+              </h2>
+              <p className="text-indigo-200 text-base leading-relaxed">
+                Sign in to see what tasks your friends have posted and start
+                earning.
+              </p>
+            </div>
+            <div className="relative z-10 text-indigo-200 text-sm">
+              Don&apos;t have an account?{" "}
+              <Link href="/signup">
+                <span className="text-white font-semibold underline underline-offset-2 hover:text-indigo-100 cursor-pointer">
+                  Sign up free
+                </span>
+              </Link>
+            </div>
+          </div>
+
+          {/* Right: Form */}
+          <div className="w-full lg:w-7/12 bg-white p-10 lg:p-14 flex flex-col justify-center">
+            <h2 className="text-3xl font-bold text-gray-900 mb-1">Sign in</h2>
+            <p className="text-gray-500 mb-8 text-sm">
+              Enter your credentials to access your account
+            </p>
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Username
+                </label>
+                <div className="relative">
+                  <FaRegEnvelope className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
+                  <input
+                    type="text"
+                    name="username"
+                    placeholder="your_username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 bg-gray-50"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Password
+                </label>
+                <div className="relative">
+                  <MdLockOutline className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-base" />
+                  <input
+                    type="password"
+                    name="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 bg-gray-50"
+                    required
+                  />
+                </div>
+              </div>
+
+              {error && (
+                <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+                  <p className="text-red-600 text-sm">{error}</p>
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold py-3 rounded-xl text-base shadow-lg transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              >
+                {loading ? "Signing in..." : "Sign In"}
+              </Button>
+            </form>
+
+            <p className="mt-6 text-center text-sm text-gray-500 lg:hidden">
+              Don&apos;t have an account?{" "}
+              <Link href="/signup">
+                <span className="text-indigo-600 font-semibold hover:underline cursor-pointer">
+                  Sign up free
+                </span>
+              </Link>
+            </p>
           </div>
         </div>
       </div>
